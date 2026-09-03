@@ -1,0 +1,26 @@
+{
+  "name": "lifeflow",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LifeFlow — Sistema Personal de Gestión Académica, Tiempo y Rendimiento",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=server",
+    "dev:client": "npm run dev --workspace=client",
+    "dev:server": "npm run dev --workspace=server",
+    "build": "npm run build --workspaces",
+    "test:engine": "npm run test --workspace=server"
+  },
+  "keywords": [
+    "planning",
+    "calendar",
+    "academic",
+    "productivity",
+    "lifeflow"
+  ],
+  "author": "",
+  "license": "MIT"
+}

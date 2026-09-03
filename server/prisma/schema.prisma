@@ -1,0 +1,237 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                      String             @id @default(cuid())
+  name                    String
+  email                   String?            @unique
+  targetWakeTime          String             @default("06:30") // HH:mm
+  maxBedTime              String             @default("00:00") // HH:mm
+  targetSleepHours        Float              @default(7.5)
+  maxFocusBlockMinutes    Int                @default(120)
+  defaultBreakMinutes     Int                @default(10)
+  personalBufferRatio     Float              @default(0.15)
+  travelFacultadMinutes   Int                @default(10)
+  travelGymMinutes        Int                @default(10)
+  rugbyPrepTravelMinutes  Int                @default(90)
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+
+  subjects                Subject[]
+  activities              Activity[]
+  scheduleBlocks          ScheduleBlock[]
+  weeklyPlans             WeeklyPlan[]
+  dailyCheckIns           DailyCheckIn[]
+  recommendations         Recommendation[]
+  habits                  Habit[]
+  recurringRules          RecurringScheduleRule[]
+}
+
+model Subject {
+  id                     String         @id @default(cuid())
+  userId                 String
+  user                   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                   String
+  code                   String?
+  type                   String         @default("CURSADA") // "CURSADA" | "FINAL"
+  color                  String         @default("#3b82f6")
+  professor              String?
+  priorityWeight         Float          @default(1.0)
+  masteryLevel           String         @default("MEDIO") // "BAJO" | "MEDIO" | "ALTO"
+  progressManualOverride Float?
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+
+  exams                  Exam[]
+  topics                 Topic[]
+  academicTasks          AcademicTask[]
+  activities             Activity[]
+}
+
+model Exam {
+  id                   String         @id @default(cuid())
+  subjectId            String
+  subject              Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  title                String
+  type                 String         @default("PARCIAL_1") // PARCIAL_1, PARCIAL_2, PRACTICO, GLOBAL, FINAL, CONSULTA
+  date                 DateTime
+  weight               Float          @default(3.0) // 1 to 5 scale
+  targetHoursEstimate  Float          @default(20.0)
+  completedHours       Float          @default(0.0)
+  isCompleted          Boolean        @default(false)
+  notes                String?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  academicTasks        AcademicTask[]
+}
+
+model Topic {
+  id            String         @id @default(cuid())
+  subjectId     String
+  subject       Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  title         String
+  orderIndex    Int            @default(0)
+  status        String         @default("NO_INICIADO") // NO_INICIADO, EN_PROGRESO, DOMINADO, REPASAR
+  masteryScore  Float          @default(0.0) // 0.0 to 1.0
+  notes         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  academicTasks AcademicTask[]
+}
+
+model AcademicTask {
+  id               String          @id @default(cuid())
+  subjectId        String
+  subject          Subject         @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  examId           String?
+  exam             Exam?           @relation(fields: [examId], references: [id], onDelete: SetNull)
+  topicId          String?
+  topic            Topic?          @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  title            String
+  taskType         String          @default("ESTUDIO_PROFUNDO") // ESTUDIO_PROFUNDO, ESTUDIO_LIVIANO, EJERCICIOS, SIMULACRO, REPASO
+  estimatedMinutes Int             @default(60)
+  remainingMinutes Int             @default(60)
+  priorityScore    Float           @default(0.0)
+  energyLevel      String          @default("ALTA") // ALTA, MEDIA, BAJA
+  status           String          @default("PENDIENTE") // PENDIENTE, EN_CURSO, COMPLETADA, POSTERGADA
+  dueDate          DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  scheduleBlocks   ScheduleBlock[]
+}
+
+model Activity {
+  id                     String          @id @default(cuid())
+  userId                 String
+  user                   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                   String
+  category               String          @default("ACADEMIA") // ACADEMIA, GIMNASIO, DEPORTE, SUENO, LECTURA, PERSONAL, MERCADO, DESCANSO, OTROS
+  subCategory            String?
+  flexibility            String          @default("FLEXIBLE") // FIJA, FLEXIBLE, OPCIONAL
+  defaultDurationMinutes Int             @default(60)
+  energyRequired         String          @default("MEDIA") // ALTA, MEDIA, BAJA
+  color                  String          @default("#64748b")
+  subjectId              String?
+  subject                Subject?        @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+
+  scheduleBlocks         ScheduleBlock[]
+}
+
+model ScheduleBlock {
+  id              String         @id @default(cuid())
+  weeklyPlanId    String?
+  weeklyPlan      WeeklyPlan?    @relation(fields: [weeklyPlanId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activityId      String?
+  activity        Activity?      @relation(fields: [activityId], references: [id], onDelete: SetNull)
+  academicTaskId  String?
+  academicTask    AcademicTask?  @relation(fields: [academicTaskId], references: [id], onDelete: SetNull)
+  title           String
+  startTime       DateTime
+  endTime         DateTime
+  durationMinutes Int
+  category        String         @default("ACADEMIA")
+  flexibility     String         @default("FLEXIBLE") // FIJA, FLEXIBLE, OPCIONAL
+  status          String         @default("PLANIFICADO") // PLANIFICADO, COMPLETADO, OMITIDO, REPROGRAMADO
+  isFixed         Boolean        @default(false)
+  justification   String?
+  energyLevel     String         @default("MEDIA") // ALTA, MEDIA, BAJA
+  notes           String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+model WeeklyPlan {
+  id                    String          @id @default(cuid())
+  userId                String
+  user                  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startDate             DateTime
+  endDate               DateTime
+  macroPhase            String          @default("FASE_1") // FASE_1, FASE_2, FASE_3, POST_DISENO
+  status                String          @default("PROPUESTO") // PROPUESTO, ACTIVO, ARCHIVADO
+  plannedStudyHours     Float           @default(0.0)
+  actualStudyHours      Float           @default(0.0)
+  sustainabilityScore   Float?
+  overloadLevel         String          @default("MODERADA") // BAJA, MODERADA, ALTA, EXCESIVA
+  sacrificeRecommendation String?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  scheduleBlocks        ScheduleBlock[]
+}
+
+model DailyCheckIn {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date           DateTime
+  sleepHours     Float     @default(7.0)
+  energyLevel    Int       @default(3) // 1 to 5
+  stressLevel    Int       @default(3) // 1 to 5
+  studyHoursDone Float     @default(0.0)
+  workoutDone    Boolean   @default(false)
+  notes          String?
+  createdAt      DateTime  @default(now())
+}
+
+model Recommendation {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date          DateTime  @default(now())
+  type          String    // ALERTA_SOBRECARGA, SACRIFICIO_SUGERIDO, PRIORIDAD_ESTUDIO, DEFICIT_SUENO, DESCANSO_REQUERIDO, RECORDATORIO
+  severity      String    @default("INFO") // INFO, WARNING, CRITICAL
+  title         String
+  message       String
+  justification String
+  actionPayload String?   // JSON string if needed
+  dismissed     Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+}
+
+model Habit {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title           String
+  category        String    @default("ESTUDIO") // SUENO, ESTUDIO, GIMNASIO, LECTURA, DESCANSO, OTROS
+  targetFrequency Int       @default(7) // times
+  frequencyUnit   String    @default("SEMANAL") // DIARIO, SEMANAL
+  isActive        Boolean   @default(true)
+  streak          Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model RecurringScheduleRule {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dayOfWeek       Int      // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  startTime       String   // "HH:mm"
+  endTime         String   // "HH:mm"
+  durationMinutes Int
+  title           String
+  category        String   @default("ACADEMIA") // ACADEMIA, GIMNASIO, DEPORTE, LECTURA, PERSONAL, MERCADO, DESCANSO, OTROS
+  flexibility     String   @default("FIJA")     // FIJA, FLEXIBLE, OPCIONAL
+  isFixed         Boolean  @default(true)
+  energyLevel     String   @default("ALTA")     // ALTA, MEDIA, BAJA
+  justification   String?
+  notes           String?
+  location        String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
