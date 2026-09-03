@@ -17,7 +17,7 @@ class PriorityScorer {
     /**
      * Calculate PriorityScore for a specific academic task
      */
-    static calculateTaskPriority(task, referenceDate = new Date('2026-09-02T12:00:00')) {
+    static calculateTaskPriority(task, referenceDate = new Date()) {
         // 1. Proximity score (0 to 10)
         let proximityScore = 2.0;
         let daysToExam = null;
@@ -124,7 +124,7 @@ class PriorityScorer {
     /**
      * Calculate Subject priority relative to current date
      */
-    static calculateSubjectPriority(subject, referenceDate = new Date('2026-09-02T12:00:00')) {
+    static calculateSubjectPriority(subject, referenceDate = new Date()) {
         let nearestExamDays = null;
         let closestExam = null;
         for (const exam of subject.exams) {

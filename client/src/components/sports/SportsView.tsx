@@ -43,7 +43,7 @@ export const SportsView: React.FC = () => {
     try {
       setSubmitting(true);
       await api.createCheckin({
-        date: '2026-09-02T20:00:00Z',
+        date: new Date().toISOString(),
         sleepHours: Number(sleepHours),
         energyLevel: Number(energyLevel),
         stressLevel: Number(stressLevel),

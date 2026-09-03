@@ -5,7 +5,7 @@ const db_1 = require("../db");
 const date_fns_1 = require("date-fns");
 const priorityScorer_1 = require("../engine/priorityScorer");
 class AcademicService {
-    static async getSubjectsWithDetails(referenceDate = new Date('2026-09-02T12:00:00Z')) {
+    static async getSubjectsWithDetails(referenceDate = new Date()) {
         const subjects = await db_1.prisma.subject.findMany({
             include: {
                 exams: {
@@ -71,7 +71,7 @@ class AcademicService {
             };
         });
     }
-    static async getExamsSortedByPriority(referenceDate = new Date('2026-09-02T12:00:00Z')) {
+    static async getExamsSortedByPriority(referenceDate = new Date()) {
         const exams = await db_1.prisma.exam.findMany({
             include: {
                 subject: true,

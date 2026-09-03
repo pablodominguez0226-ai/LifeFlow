@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { ScheduleService } from '../services/scheduleService';
 import { IcalService } from '../services/icalService';
+import { startOfWeek, endOfWeek } from 'date-fns';
 
 export class CalendarController {
   public static async getIcsFeed(req: Request, res: Response) {
@@ -23,9 +24,23 @@ export class CalendarController {
   }
   public static async getBlocks(req: Request, res: Response) {
     try {
-      const { start, end } = req.query;
-      const startDate = start ? new Date(start as string) : new Date('2026-08-31T00:00:00Z');
-      const endDate = end ? new Date(end as string) : new Date('2026-09-07T23:59:59Z');
+      const { start, end, date } = req.query;
+      let startDate: Date;
+      let endDate: Date;
+
+      if (start) {
+        startDate = new Date(start as string);
+      } else if (date) {
+        startDate = startOfWeek(new Date(date as string), { weekStartsOn: 1 });
+      } else {
+        startDate = startOfWeek(new Date(), { weekStartsOn: 1 });
+      }
+
+      if (end) {
+        endDate = new Date(end as string);
+      } else {
+        endDate = endOfWeek(startDate, { weekStartsOn: 1 });
+      }
 
       const blocks = await ScheduleService.getBlocksForRange(startDate, endDate);
       res.json(blocks);

@@ -19,7 +19,7 @@ export class PriorityScorer {
    */
   public static calculateTaskPriority(
     task: TaskInput,
-    referenceDate: Date = new Date('2026-09-02T12:00:00')
+    referenceDate: Date = new Date()
   ): PriorityBreakdown {
     // 1. Proximity score (0 to 10)
     let proximityScore = 2.0;
@@ -126,7 +126,7 @@ export class PriorityScorer {
    */
   public static calculateSubjectPriority(
     subject: SubjectInput,
-    referenceDate: Date = new Date('2026-09-02T12:00:00')
+    referenceDate: Date = new Date()
   ): { priorityScore: number; nearestExamDays: number | null; explanation: string } {
     let nearestExamDays: number | null = null;
     let closestExam: ExamInput | null = null;

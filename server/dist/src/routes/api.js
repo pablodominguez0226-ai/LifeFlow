@@ -9,14 +9,21 @@ const taskController_1 = require("../controllers/taskController");
 const planningController_1 = require("../controllers/planningController");
 const checkinController_1 = require("../controllers/checkinController");
 const statsController_1 = require("../controllers/statsController");
+const recurringRuleController_1 = require("../controllers/recurringRuleController");
 const router = (0, express_1.Router)();
 // Dashboard
 router.get('/dashboard', dashboardController_1.DashboardController.getSummary);
 // Calendar
+router.get('/calendar/feed.ics', calendarController_1.CalendarController.getIcsFeed);
 router.get('/calendar', calendarController_1.CalendarController.getBlocks);
 router.post('/calendar/block', calendarController_1.CalendarController.createBlock);
 router.patch('/calendar/block/:id', calendarController_1.CalendarController.updateBlock);
 router.delete('/calendar/block/:id', calendarController_1.CalendarController.deleteBlock);
+// Recurring Schedule Rules (Horarios Fijos / Cursadas recurrentes)
+router.get('/recurring-rules', recurringRuleController_1.RecurringRuleController.getRules);
+router.post('/recurring-rules', recurringRuleController_1.RecurringRuleController.createRule);
+router.patch('/recurring-rules/:id', recurringRuleController_1.RecurringRuleController.updateRule);
+router.delete('/recurring-rules/:id', recurringRuleController_1.RecurringRuleController.deleteRule);
 // Subjects & Exams & Tasks
 router.get('/subjects', subjectController_1.SubjectController.getSubjects);
 router.get('/subjects/:id', subjectController_1.SubjectController.getSubjectById);

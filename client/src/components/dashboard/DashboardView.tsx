@@ -18,6 +18,8 @@ import {
   RotateCw,
   Sparkles,
 } from 'lucide-react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 interface DashboardViewProps {
   onNavigateToCalendar: () => void;
@@ -40,7 +42,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const loadData = async () => {
     try {
       setLoading(true);
-      const res = await api.getDashboard('2026-09-02T12:00:00Z');
+      const res = await api.getDashboard(new Date().toISOString());
       setData(res);
     } catch (err: any) {
       console.error(err);
@@ -127,6 +129,46 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     },
   ];
 
+  const today = new Date();
+  const rawDayName = format(today, 'EEEE', { locale: es });
+  const capitalizedDayName = rawDayName.charAt(0).toUpperCase() + rawDayName.slice(1);
+  const rawFormattedDate = format(today, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es });
+  const displayFullDate = rawFormattedDate.charAt(0).toUpperCase() + rawFormattedDate.slice(1);
+  const currentDayOfWeek = today.getDay(); // 0 = DOM, 1 = LUN, ..., 6 = SÁB
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'ACADEMIA':
+        return BookOpen;
+      case 'GIMNASIO':
+      case 'DEPORTE':
+        return Dumbbell;
+      case 'LECTURA':
+        return BookOpen;
+      case 'MERCADO':
+        return TrendingUp;
+      case 'DESCANSO':
+      case 'PERSONAL':
+      default:
+        return Utensils;
+    }
+  };
+
+  const dynamicAgendaItems =
+    data?.todayBlocks && data.todayBlocks.length > 0
+      ? data.todayBlocks.map((b: any) => ({
+          time: `${format(new Date(b.startTime), 'HH:mm')}\n${format(new Date(b.endTime), 'HH:mm')}`,
+          title: b.title,
+          subtitle: b.justification || b.category,
+          tag: b.energyLevel || (b.isFixed ? 'FIJA' : 'FLEXIBLE'),
+          tagColor:
+            b.energyLevel === 'ALTA'
+              ? 'bg-[#2A0808] text-red-300 border-[#5C1313]'
+              : 'bg-[#181818] text-zinc-400 border-[#2A2A2A]',
+          icon: getCategoryIcon(b.category),
+        }))
+      : agendaItems;
+
   return (
     <div className="p-6 space-y-6 max-w-[1600px] mx-auto bg-black text-white">
       {/* Top Header Greeting & Action Buttons */}
@@ -135,7 +177,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
             ¡Buen día, Pablo!
           </h1>
-          <p className="text-xs text-zinc-400 mt-1">Miércoles, 2 de Septiembre de 2026</p>
+          <p className="text-xs text-zinc-400 mt-1">{displayFullDate}</p>
         </div>
 
         <div className="flex items-center gap-3 self-start sm:self-auto">
@@ -168,7 +210,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
           <div className="min-w-0">
             <span className="text-[11px] font-medium text-zinc-400 block">Prioridad de hoy</span>
-            <p className="text-base font-bold text-white truncate">Paradigmas & Diseño</p>
+            <p className="text-base font-bold text-white truncate">
+              {data?.dayPriority || 'Paradigmas & Diseño'}
+            </p>
             <p className="text-[11px] text-zinc-400">1º parcial en 23 días • Final en 36 días</p>
           </div>
         </div>
@@ -180,7 +224,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
           <div className="min-w-0">
             <span className="text-[11px] font-medium text-zinc-400 block">Carga del día</span>
-            <p className="text-base font-bold text-white">Equilibrada</p>
+            <p className="text-base font-bold text-white">
+              {data?.dayLoadLevel
+                ? `${data.dayLoadLevel.charAt(0)}${data.dayLoadLevel.slice(1).toLowerCase()}`
+                : 'Equilibrada'}
+            </p>
             <p className="text-[11px] text-zinc-400">Sin cursada fija hoy</p>
           </div>
         </div>
@@ -193,7 +241,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
             <div className="min-w-0">
               <span className="text-[11px] font-medium text-zinc-400 block">Estudio hoy</span>
-              <p className="text-base font-bold text-white font-mono">4h 00m</p>
+              <p className="text-base font-bold text-white font-mono">
+                {data?.studyStats ? `${data.studyStats.plannedHours}h 00m` : '4h 00m'}
+              </p>
               <p className="text-[11px] text-zinc-400">en 2 bloques de 120m</p>
             </div>
           </div>
@@ -210,7 +260,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
             <div className="min-w-0">
               <span className="text-[11px] font-medium text-zinc-400 block">Sueño</span>
-              <p className="text-base font-bold text-white font-mono">7h 30m</p>
+              <p className="text-base font-bold text-white font-mono">
+                {data?.studyStats ? `${data.studyStats.actualSleepHours}h` : '7h 30m'}
+              </p>
               <p className="text-[11px] text-zinc-400">anoche (máx acostarse 00:00)</p>
             </div>
           </div>
@@ -229,15 +281,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {/* Agenda de hoy (7 cols) */}
             <div className="md:col-span-7 bg-dark-card border border-dark-border rounded-2xl p-5">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold text-white">Agenda de hoy (Miércoles)</h3>
-                <span className="text-[10px] text-zinc-400 font-mono">Día flexible</span>
+                <h3 className="text-sm font-bold text-white">
+                  Agenda de hoy ({capitalizedDayName})
+                </h3>
+                <span className="text-[10px] text-zinc-400 font-mono">
+                  {data?.dayLoadLevel ? `Carga ${data.dayLoadLevel.toLowerCase()}` : 'Día flexible'}
+                </span>
               </div>
 
               <div className="space-y-4 relative">
                 {/* Continuous vertical red line */}
                 <div className="absolute left-[59px] top-3 bottom-3 w-[2px] bg-zinc-800" />
 
-                {agendaItems.map((item, idx) => {
+                {dynamicAgendaItems.map((item: any, idx: number) => {
                   const Icon = item.icon;
                   return (
                     <div key={idx} className="flex items-center gap-3 relative">
@@ -352,7 +408,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div className="grid grid-cols-7 gap-2">
               {/* LUN */}
               <div className="space-y-2 text-center">
-                <div className="text-[10px] font-bold text-zinc-400 font-mono py-1">LUN</div>
+                <div
+                  className={`text-[10px] font-bold font-mono py-1 ${
+                    currentDayOfWeek === 1
+                      ? 'text-white bg-red-intense rounded-md'
+                      : 'text-zinc-400'
+                  }`}
+                >
+                  LUN{currentDayOfWeek === 1 ? ' (Hoy)' : ''}
+                </div>
                 <div className="space-y-1.5">
                   <div className="p-2 rounded-lg bg-[#300707] border border-[#5C1313] text-left">
                     <p className="text-[10px] font-bold text-white leading-tight">Paradigmas</p>
@@ -367,7 +431,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
               {/* MAR */}
               <div className="space-y-2 text-center">
-                <div className="text-[10px] font-bold text-zinc-400 font-mono py-1">MAR</div>
+                <div
+                  className={`text-[10px] font-bold font-mono py-1 ${
+                    currentDayOfWeek === 2
+                      ? 'text-white bg-red-intense rounded-md'
+                      : 'text-zinc-400'
+                  }`}
+                >
+                  MAR{currentDayOfWeek === 2 ? ' (Hoy)' : ''}
+                </div>
                 <div className="space-y-1.5">
                   <div className="p-2 rounded-lg bg-[#291307] border border-[#5E2B0D] text-left">
                     <p className="text-[10px] font-bold text-white leading-tight">Gimnasio</p>
@@ -384,10 +456,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </div>
               </div>
 
-              {/* MIÉ (Active Today) */}
+              {/* MIÉ */}
               <div className="space-y-2 text-center">
-                <div className="text-[10px] font-bold text-white font-mono py-1 bg-red-intense rounded-md">
-                  MIÉ (Hoy)
+                <div
+                  className={`text-[10px] font-bold font-mono py-1 ${
+                    currentDayOfWeek === 3
+                      ? 'text-white bg-red-intense rounded-md'
+                      : 'text-zinc-400'
+                  }`}
+                >
+                  MIÉ{currentDayOfWeek === 3 ? ' (Hoy)' : ''}
                 </div>
                 <div className="space-y-1.5">
                   <div className="p-2 rounded-lg bg-[#240808] border border-[#451010] text-left">
@@ -407,7 +485,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
               {/* JUE */}
               <div className="space-y-2 text-center">
-                <div className="text-[10px] font-bold text-zinc-400 font-mono py-1">JUE</div>
+                <div
+                  className={`text-[10px] font-bold font-mono py-1 ${
+                    currentDayOfWeek === 4
+                      ? 'text-white bg-red-intense rounded-md'
+                      : 'text-zinc-400'
+                  }`}
+                >
+                  JUE{currentDayOfWeek === 4 ? ' (Hoy)' : ''}
+                </div>
                 <div className="space-y-1.5">
                   <div className="p-2 rounded-lg bg-[#240808] border border-[#451010] text-left">
                     <p className="text-[10px] font-bold text-white leading-tight">Estudio Econ.</p>
@@ -426,7 +512,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
               {/* VIE */}
               <div className="space-y-2 text-center">
-                <div className="text-[10px] font-bold text-zinc-400 font-mono py-1">VIE</div>
+                <div
+                  className={`text-[10px] font-bold font-mono py-1 ${
+                    currentDayOfWeek === 5
+                      ? 'text-white bg-red-intense rounded-md'
+                      : 'text-zinc-400'
+                  }`}
+                >
+                  VIE{currentDayOfWeek === 5 ? ' (Hoy)' : ''}
+                </div>
                 <div className="space-y-1.5">
                   <div className="p-2 rounded-lg bg-[#300707] border border-[#5C1313] text-left">
                     <p className="text-[10px] font-bold text-white leading-tight">Paradigmas</p>
@@ -445,7 +539,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
               {/* SÁB */}
               <div className="space-y-2 text-center">
-                <div className="text-[10px] font-bold text-zinc-400 font-mono py-1">SÁB</div>
+                <div
+                  className={`text-[10px] font-bold font-mono py-1 ${
+                    currentDayOfWeek === 6
+                      ? 'text-white bg-red-intense rounded-md'
+                      : 'text-zinc-400'
+                  }`}
+                >
+                  SÁB{currentDayOfWeek === 6 ? ' (Hoy)' : ''}
+                </div>
                 <div className="space-y-1.5">
                   <div className="p-2 rounded-lg bg-[#0A2613] border border-[#165E30] text-left">
                     <p className="text-[10px] font-bold text-white leading-tight">Fútbol</p>
@@ -460,7 +562,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
               {/* DOM */}
               <div className="space-y-2 text-center">
-                <div className="text-[10px] font-bold text-zinc-400 font-mono py-1">DOM</div>
+                <div
+                  className={`text-[10px] font-bold font-mono py-1 ${
+                    currentDayOfWeek === 0
+                      ? 'text-white bg-red-intense rounded-md'
+                      : 'text-zinc-400'
+                  }`}
+                >
+                  DOM{currentDayOfWeek === 0 ? ' (Hoy)' : ''}
+                </div>
                 <div className="space-y-1.5">
                   <div className="p-2 rounded-lg bg-[#181818] border border-[#2A2A2A] text-left">
                     <p className="text-[10px] font-bold text-white leading-tight">Descanso</p>

@@ -9,7 +9,7 @@ interface DailyPlanModalProps {
 }
 
 export const DailyPlanModal: React.FC<DailyPlanModalProps> = ({ isOpen, onClose }) => {
-  const [date, setDate] = useState('2026-09-02');
+  const [date, setDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
   const [plan, setPlan] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
 

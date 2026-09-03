@@ -2,7 +2,7 @@ import { prisma } from '../db';
 import { subDays } from 'date-fns';
 
 export class StatsService {
-  public static async getWeeklyStatistics(referenceDate: Date = new Date('2026-09-02T12:00:00Z')) {
+  public static async getWeeklyStatistics(referenceDate: Date = new Date()) {
     const user = await prisma.user.findFirst();
     if (!user) throw new Error('No user found');
 

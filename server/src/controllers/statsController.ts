@@ -5,7 +5,7 @@ import { prisma } from '../db';
 export class StatsController {
   public static async getStats(req: Request, res: Response) {
     try {
-      const refDate = req.query.date ? new Date(req.query.date as string) : new Date('2026-09-02T12:00:00Z');
+      const refDate = req.query.date ? new Date(req.query.date as string) : new Date();
       const stats = await StatsService.getWeeklyStatistics(refDate);
       res.json(stats);
     } catch (error: any) {

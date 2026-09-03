@@ -8,25 +8,36 @@ class PlanningService {
     /**
      * Builds the comprehensive Dashboard "Hoy" payload
      */
-    static async getDashboardSummary(referenceDate = new Date('2026-09-02T12:00:00Z')) {
+    static async getDashboardSummary(referenceDate = new Date()) {
         const user = await db_1.prisma.user.findFirst();
         if (!user)
             throw new Error('No user found');
+        const startOfDay = new Date(referenceDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(referenceDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        const utcStartOfDay = new Date(referenceDate);
+        utcStartOfDay.setUTCHours(0, 0, 0, 0);
+        const utcEndOfDay = new Date(referenceDate);
+        utcEndOfDay.setUTCHours(23, 59, 59, 999);
+        const minStart = startOfDay < utcStartOfDay ? startOfDay : utcStartOfDay;
+        const maxEnd = endOfDay > utcEndOfDay ? endOfDay : utcEndOfDay;
         // 1. Get today's checkin if exists
         const todayCheckin = await db_1.prisma.dailyCheckIn.findFirst({
             where: {
                 date: {
-                    gte: new Date('2026-09-02T00:00:00Z'),
-                    lte: new Date('2026-09-02T23:59:59Z'),
+                    gte: minStart,
+                    lte: maxEnd,
                 },
             },
+            orderBy: { date: 'desc' },
         });
         // 2. Get today's schedule blocks
         const todayBlocks = await db_1.prisma.scheduleBlock.findMany({
             where: {
                 startTime: {
-                    gte: new Date('2026-09-02T00:00:00Z'),
-                    lte: new Date('2026-09-02T23:59:59Z'),
+                    gte: minStart,
+                    lte: maxEnd,
                 },
             },
             orderBy: { startTime: 'asc' },
@@ -80,6 +91,7 @@ class PlanningService {
         return {
             currentDate: referenceDate,
             currentTime: (0, date_fns_1.format)(referenceDate, 'HH:mm'),
+            todayBlocks,
             nextActivity: nextActivity
                 ? {
                     title: nextActivity.title,
@@ -164,7 +176,28 @@ class PlanningService {
             rugbyPrepTravelMinutes: user.rugbyPrepTravelMinutes,
             windDownStartTime: '22:30',
         };
-        return engine_1.WeeklyGenerator.generateWeek(mondayDate, taskInputs, subjectInputs, userConstraints, options);
+        // Query active recurring schedule rules from SQLite
+        const recurringRulesFromDb = await db_1.prisma.recurringScheduleRule.findMany({
+            where: { userId: user.id, isActive: true },
+            orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
+        });
+        const recurringRuleInputs = recurringRulesFromDb.map((r) => ({
+            id: r.id,
+            dayOfWeek: r.dayOfWeek,
+            startTime: r.startTime,
+            endTime: r.endTime,
+            durationMinutes: r.durationMinutes,
+            title: r.title,
+            category: r.category,
+            flexibility: r.flexibility,
+            isFixed: r.isFixed,
+            energyLevel: r.energyLevel,
+            justification: r.justification || undefined,
+            notes: r.notes || undefined,
+            location: r.location || undefined,
+            isActive: r.isActive,
+        }));
+        return engine_1.WeeklyGenerator.generateWeek(mondayDate, taskInputs, subjectInputs, recurringRuleInputs, userConstraints, options);
     }
     /**
      * Applies and saves the proposed week into the schedule table
@@ -230,11 +263,47 @@ class PlanningService {
     /**
      * Daily breakdown (Morning / Afternoon / Evening)
      */
+    /**
+     * Daily breakdown (Morning / Afternoon / Evening)
+     * Integrates DailyCheckIn energy/fatigue feedback loop
+     */
     static async planDay(targetDate) {
+        const user = await db_1.prisma.user.findFirst();
+        if (!user)
+            throw new Error('No user found');
         const start = new Date(targetDate);
         start.setHours(0, 0, 0, 0);
         const end = new Date(targetDate);
         end.setHours(23, 59, 59, 999);
+        // Fetch closest or matching DailyCheckIn for the requested day, preferring latest created
+        let checkin = await db_1.prisma.dailyCheckIn.findFirst({
+            where: {
+                userId: user.id,
+                date: { gte: start, lte: end },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+        if (!checkin) {
+            checkin = await db_1.prisma.dailyCheckIn.findFirst({
+                where: {
+                    userId: user.id,
+                    date: { lte: end },
+                },
+                orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+            });
+        }
+        let energyContext;
+        if (checkin) {
+            energyContext = {
+                date: checkin.date,
+                sleepHours: checkin.sleepHours,
+                energyLevel: checkin.energyLevel,
+                stressLevel: checkin.stressLevel,
+                studyHoursDone: checkin.studyHoursDone,
+                workoutDone: checkin.workoutDone,
+                notes: checkin.notes,
+            };
+        }
         const blocks = await db_1.prisma.scheduleBlock.findMany({
             where: {
                 startTime: { gte: start, lte: end },
@@ -252,18 +321,78 @@ class PlanningService {
             energyLevel: b.energyLevel,
             justification: b.justification || undefined,
         }));
-        return engine_1.DailyPlanner.planDay(targetDate, timeSlots);
+        const userConstraints = {
+            targetWakeTime: user.targetWakeTime,
+            maxBedTime: user.maxBedTime,
+            targetSleepHours: user.targetSleepHours,
+            maxFocusBlockMinutes: user.maxFocusBlockMinutes,
+            chunkWorkMinutes: 50,
+            chunkBreakMinutes: 10,
+            personalBufferRatio: user.personalBufferRatio,
+            travelFacultadMinutes: 10,
+            travelGymMinutes: 10,
+            rugbyPrepTravelMinutes: 90,
+            windDownStartTime: '22:30',
+        };
+        const plan = engine_1.DailyPlanner.planDay(targetDate, timeSlots, energyContext, userConstraints);
+        // If severe fatigue is detected, persist an actionable recommendation in database
+        if (plan.fatigueAdjustment?.isFatigued) {
+            const existingRec = await db_1.prisma.recommendation.findFirst({
+                where: {
+                    userId: user.id,
+                    type: { in: ['DEFICIT_SUENO', 'DESCANSO_REQUERIDO'] },
+                    createdAt: { gte: start, lte: end },
+                },
+            });
+            if (!existingRec) {
+                const isSleepDeficit = (energyContext?.sleepHours ?? 7.5) < 6.5;
+                await db_1.prisma.recommendation.create({
+                    data: {
+                        userId: user.id,
+                        type: isSleepDeficit ? 'DEFICIT_SUENO' : 'DESCANSO_REQUERIDO',
+                        severity: (energyContext?.energyLevel ?? 3) <= 1 || (energyContext?.sleepHours ?? 7) < 5.5
+                            ? 'CRITICAL'
+                            : 'WARNING',
+                        title: isSleepDeficit
+                            ? 'Alerta de Fatiga: Déficit de Sueño Detectado'
+                            : 'Alerta de Fatiga: Sobrecarga & Estrés Elevado',
+                        message: `El check-in registró energía ${energyContext?.energyLevel}/5 y ${energyContext?.sleepHours}h de descanso. Se han acotado las sesiones de estudio a máx. 60 min y adelantado el descanso a las 22:00. Se sugiere una siesta estratégica de 20 min o descanso compensatorio.`,
+                        justification: 'La saturación cognitiva sin descanso reparador deteriora la consolidación de la memoria y la retención conceptual.',
+                    },
+                });
+            }
+        }
+        return plan;
     }
     /**
      * Replanning options for missed task
      */
-    static async replanTask(taskId, currentDate = new Date('2026-09-02T12:00:00Z')) {
+    static async replanTask(taskId, currentDate = new Date()) {
         const task = await db_1.prisma.academicTask.findUnique({
             where: { id: taskId },
             include: { subject: true, exam: true },
         });
         if (!task)
             throw new Error('Task not found');
+        const checkin = await db_1.prisma.dailyCheckIn.findFirst({
+            where: {
+                userId: task.subject.userId,
+                date: { lte: currentDate },
+            },
+            orderBy: { date: 'desc' },
+        });
+        let energyContext;
+        if (checkin) {
+            energyContext = {
+                date: checkin.date,
+                sleepHours: checkin.sleepHours,
+                energyLevel: checkin.energyLevel,
+                stressLevel: checkin.stressLevel,
+                studyHoursDone: checkin.studyHoursDone,
+                workoutDone: checkin.workoutDone,
+                notes: checkin.notes,
+            };
+        }
         const existingBlocks = await db_1.prisma.scheduleBlock.findMany({
             where: { startTime: { gte: currentDate } },
         });
@@ -291,7 +420,23 @@ class PlanningService {
             subjectMastery: task.subject.masteryLevel,
             subjectWeight: task.subject.priorityWeight,
         };
-        return engine_1.Replanner.evaluateMissedTask(taskInput, currentDate, slots);
+        const user = await db_1.prisma.user.findUnique({ where: { id: task.subject.userId } });
+        const userConstraints = user
+            ? {
+                targetWakeTime: user.targetWakeTime,
+                maxBedTime: user.maxBedTime,
+                targetSleepHours: user.targetSleepHours,
+                maxFocusBlockMinutes: user.maxFocusBlockMinutes,
+                chunkWorkMinutes: 50,
+                chunkBreakMinutes: 10,
+                personalBufferRatio: user.personalBufferRatio,
+                travelFacultadMinutes: 10,
+                travelGymMinutes: 10,
+                rugbyPrepTravelMinutes: 90,
+                windDownStartTime: '22:30',
+            }
+            : undefined;
+        return engine_1.Replanner.evaluateMissedTask(taskInput, currentDate, slots, userConstraints, energyContext);
     }
 }
 exports.PlanningService = PlanningService;

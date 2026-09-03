@@ -6,9 +6,11 @@ const capacityAnalyzer_1 = require("./capacityAnalyzer");
 class Replanner {
     /**
      * Evaluates an uncompleted task and returns actionable options without creating a domino effect.
+     * Considers user fatigue feedback if provided.
      */
-    static evaluateMissedTask(task, currentDate, existingBlocks, constraints = capacityAnalyzer_1.CapacityAnalyzer.DEFAULT_CONSTRAINTS) {
+    static evaluateMissedTask(task, currentDate, existingBlocks, constraints = capacityAnalyzer_1.CapacityAnalyzer.DEFAULT_CONSTRAINTS, energyContext) {
         const isCritical = task.taskType === 'SIMULACRO' || (task.examDate && (task.examDate.getTime() - currentDate.getTime()) / (1000 * 3600 * 24) <= 7);
+        const fatigue = capacityAnalyzer_1.CapacityAnalyzer.calculateFatigaAdjustment(energyContext, constraints);
         const options = [];
         // Search for a candidate open slot over the next 3 days
         const candidateSlot = this.findNextAvailableSlot(currentDate, task.remainingMinutes, existingBlocks, constraints);
@@ -49,7 +51,13 @@ class Replanner {
         // Recommendation logic
         let recommendedAction = 'MOVER';
         let justification = '';
-        if (isCritical) {
+        if (fatigue.isFatigued && task.remainingMinutes > 60) {
+            recommendedAction = isCritical ? 'DIVIDIR' : 'REDUCIR';
+            justification = `Alerta de fatiga activa (${fatigue.warnings.join(', ')}). ${isCritical
+                ? 'Al ser crítica, se recomienda dividirla en 2 sesiones cortas para no saturar.'
+                : 'Se recomienda reducir la duración al 60% para avanzar sin acumular agotamiento cognitivo.'}`;
+        }
+        else if (isCritical) {
             recommendedAction = candidateSlot ? 'MOVER' : 'DIVIDIR';
             justification = `Tarea crítica asociada a examen próximo (${task.subjectName}). Es prioritario reubicarla o dividirla sin comprometer el sueño.`;
         }

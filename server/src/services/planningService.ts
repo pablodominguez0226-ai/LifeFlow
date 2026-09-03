@@ -18,26 +18,40 @@ export class PlanningService {
   /**
    * Builds the comprehensive Dashboard "Hoy" payload
    */
-  public static async getDashboardSummary(referenceDate: Date = new Date('2026-09-02T12:00:00Z')) {
+  public static async getDashboardSummary(referenceDate: Date = new Date()) {
     const user = await prisma.user.findFirst();
     if (!user) throw new Error('No user found');
+
+    const startOfDay = new Date(referenceDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(referenceDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const utcStartOfDay = new Date(referenceDate);
+    utcStartOfDay.setUTCHours(0, 0, 0, 0);
+    const utcEndOfDay = new Date(referenceDate);
+    utcEndOfDay.setUTCHours(23, 59, 59, 999);
+
+    const minStart = startOfDay < utcStartOfDay ? startOfDay : utcStartOfDay;
+    const maxEnd = endOfDay > utcEndOfDay ? endOfDay : utcEndOfDay;
 
     // 1. Get today's checkin if exists
     const todayCheckin = await prisma.dailyCheckIn.findFirst({
       where: {
         date: {
-          gte: new Date('2026-09-02T00:00:00Z'),
-          lte: new Date('2026-09-02T23:59:59Z'),
+          gte: minStart,
+          lte: maxEnd,
         },
       },
+      orderBy: { date: 'desc' },
     });
 
     // 2. Get today's schedule blocks
     const todayBlocks = await prisma.scheduleBlock.findMany({
       where: {
         startTime: {
-          gte: new Date('2026-09-02T00:00:00Z'),
-          lte: new Date('2026-09-02T23:59:59Z'),
+          gte: minStart,
+          lte: maxEnd,
         },
       },
       orderBy: { startTime: 'asc' },
@@ -98,6 +112,7 @@ export class PlanningService {
     return {
       currentDate: referenceDate,
       currentTime: format(referenceDate, 'HH:mm'),
+      todayBlocks,
       nextActivity: nextActivity
         ? {
             title: nextActivity.title,
@@ -418,7 +433,7 @@ export class PlanningService {
   /**
    * Replanning options for missed task
    */
-  public static async replanTask(taskId: string, currentDate: Date = new Date('2026-09-02T12:00:00Z')) {
+  public static async replanTask(taskId: string, currentDate: Date = new Date()) {
     const task = await prisma.academicTask.findUnique({
       where: { id: taskId },
       include: { subject: true, exam: true },

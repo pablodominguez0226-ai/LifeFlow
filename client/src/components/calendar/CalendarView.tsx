@@ -11,7 +11,7 @@ import {
   RotateCw,
   Calendar as CalendarIcon,
 } from 'lucide-react';
-import { addDays, format, isSameDay } from 'date-fns';
+import { addDays, format, isSameDay, isToday, startOfWeek } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { SyncCalendarModal } from './SyncCalendarModal';
 
@@ -24,7 +24,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   onOpenReplan,
   onOpenNewActivity,
 }) => {
-  const [currentMonday, setCurrentMonday] = useState<Date>(new Date('2026-08-31T00:00:00Z'));
+  const [currentMonday, setCurrentMonday] = useState<Date>(() =>
+    startOfWeek(new Date(), { weekStartsOn: 1 })
+  );
   const [blocks, setBlocks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedBlock, setSelectedBlock] = useState<any | null>(null);
@@ -60,7 +62,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   };
 
   const handleCurrentWeek = () => {
-    setCurrentMonday(new Date('2026-08-31T00:00:00Z'));
+    setCurrentMonday(startOfWeek(new Date(), { weekStartsOn: 1 }));
   };
 
   const handleToggleComplete = async (block: any) => {
@@ -124,7 +126,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             onClick={handleCurrentWeek}
             className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-red-intense text-white hover:bg-red-hover transition-colors shadow-sm"
           >
-            Semana Actual (02 Sep)
+            Semana Actual
           </button>
           <button
             onClick={handleNextWeek}
@@ -190,13 +192,13 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           const dayBlocks = filteredBlocks.filter((b) =>
             isSameDay(new Date(b.startTime), day)
           );
-          const isToday = isSameDay(day, new Date('2026-09-02T12:00:00Z'));
+          const isTodayColumn = isToday(day);
 
           return (
             <div
               key={idx}
               className={`flex flex-col bg-dark-card border rounded-2xl overflow-hidden ${
-                isToday
+                isTodayColumn
                   ? 'border-red-intense shadow-md shadow-red-intense/10'
                   : 'border-dark-border'
               }`}
@@ -204,21 +206,21 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               {/* Day Header */}
               <div
                 className={`p-3 border-b text-center ${
-                  isToday
+                  isTodayColumn
                     ? 'bg-red-intense text-white border-red-intense'
                     : 'bg-dark-cardSecondary/60 border-dark-border'
                 }`}
               >
                 <span
                   className={`text-[10px] font-bold uppercase tracking-wider block ${
-                    isToday ? 'text-white/90' : 'text-zinc-500'
+                    isTodayColumn ? 'text-white/90' : 'text-zinc-500'
                   }`}
                 >
                   {format(day, 'EEEE', { locale: es })}
                 </span>
                 <span
                   className={`text-sm font-extrabold font-mono ${
-                    isToday ? 'text-white' : 'text-zinc-200'
+                    isTodayColumn ? 'text-white' : 'text-zinc-200'
                   }`}
                 >
                   {format(day, 'dd/MM')}

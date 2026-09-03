@@ -6,7 +6,7 @@ const db_1 = require("../db");
 class SubjectController {
     static async getSubjects(req, res) {
         try {
-            const refDate = req.query.date ? new Date(req.query.date) : new Date('2026-09-02T12:00:00Z');
+            const refDate = req.query.date ? new Date(req.query.date) : new Date();
             const subjects = await academicService_1.AcademicService.getSubjectsWithDetails(refDate);
             res.json(subjects);
         }

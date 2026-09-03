@@ -17,6 +17,71 @@ class CapacityAnalyzer {
         windDownStartTime: '22:30',
     };
     /**
+     * Calculates fatigue adjustments based on DailyCheckIn metrics.
+     * If energyLevel <= 2, sleepHours < 6.5, or stressLevel >= 4:
+     * - Reduces max continuous focus block from 120m to 60m.
+     * - Advances nocturnal wind-down from 22:30 to 22:00.
+     * - Directs task downgrade from ESTUDIO_PROFUNDO to REPASO/EJERCICIOS or 60% duration.
+     */
+    static calculateFatigaAdjustment(context, constraints = this.DEFAULT_CONSTRAINTS) {
+        if (!context) {
+            return {
+                isFatigued: false,
+                fatigueScore: 0,
+                adjustedMaxFocusMinutes: constraints.maxFocusBlockMinutes,
+                adjustedWindDownStartTime: constraints.windDownStartTime,
+                downgradeDeepStudy: false,
+                durationScale: 1.0,
+                recommendedAction: 'Estado nominal: Mantener bloques habituales de foco y descanso.',
+                warnings: [],
+            };
+        }
+        const warnings = [];
+        let isFatigued = false;
+        if (context.energyLevel <= 2) {
+            warnings.push(`Nivel de energía bajo (${context.energyLevel}/5).`);
+            isFatigued = true;
+        }
+        if (context.sleepHours < 6.5) {
+            warnings.push(`Déficit de sueño detectado (${context.sleepHours}h frente a la meta de ${constraints.targetSleepHours}h).`);
+            isFatigued = true;
+        }
+        if (context.stressLevel >= 4) {
+            warnings.push(`Nivel elevado de estrés acumulado (${context.stressLevel}/5).`);
+            isFatigued = true;
+        }
+        if (isFatigued) {
+            const fatigueScore = Math.min(100, Math.round((5 - context.energyLevel) * 25 +
+                Math.max(0, 7.5 - context.sleepHours) * 20 +
+                context.stressLevel * 15));
+            return {
+                isFatigued: true,
+                fatigueScore,
+                adjustedMaxFocusMinutes: 60, // Limitado a máx 60 min (en vez de 120)
+                adjustedWindDownStartTime: '22:00', // Adelanto de descompresión a las 22:00
+                downgradeDeepStudy: true,
+                recommendedTaskType: 'REPASO',
+                durationScale: 0.6, // Reducción de alcance al 60%
+                recommendedAction: 'Protocolo de Fatiga Activo: Se reducen los bloques continuos a máx. 60 min, se sustituye el estudio profundo por repaso o ejercicios ligeros, y el descanso nocturno se adelanta a las 22:00.',
+                warnings,
+            };
+        }
+        return {
+            isFatigued: false,
+            fatigueScore: 10,
+            adjustedMaxFocusMinutes: constraints.maxFocusBlockMinutes,
+            adjustedWindDownStartTime: constraints.windDownStartTime,
+            downgradeDeepStudy: false,
+            durationScale: 1.0,
+            recommendedAction: 'Energía y descanso adecuados: Mantener bloques estándar de hasta 120 min.',
+            warnings: [],
+        };
+    }
+    // Alias for English convention
+    static calculateFatigueAdjustment(context, constraints = this.DEFAULT_CONSTRAINTS) {
+        return this.calculateFatigaAdjustment(context, constraints);
+    }
+    /**
      * Checks whether a proposed time slot violates sleep or bedtime rules.
      * Max bedtime is 00:00; wake time is 06:30.
      */
@@ -48,9 +113,17 @@ class CapacityAnalyzer {
      * Validates if a task can be safely scheduled at the proposed time.
      */
     static canScheduleTaskAt(startTime, durationMinutes, taskType, energyLevel, dayOfWeek, // 0 = Sun, 1 = Mon, 2 = Tue, 3 = Wed, 4 = Thu, 5 = Fri, 6 = Sat
-    constraints = this.DEFAULT_CONSTRAINTS) {
+    constraints = this.DEFAULT_CONSTRAINTS, energyContext) {
+        const fatigue = this.calculateFatigaAdjustment(energyContext, constraints);
+        const effectiveConstraints = fatigue.isFatigued
+            ? {
+                ...constraints,
+                maxFocusBlockMinutes: fatigue.adjustedMaxFocusMinutes,
+                windDownStartTime: fatigue.adjustedWindDownStartTime,
+            }
+            : constraints;
         // 1. Sleep window check (00:00 - 06:30)
-        if (this.isWithinSleepWindow(startTime, constraints)) {
+        if (this.isWithinSleepWindow(startTime, effectiveConstraints)) {
             return {
                 allowed: false,
                 reason: 'Viola la ventana sagrada de sueño (00:00 a 06:30).',
@@ -82,20 +155,21 @@ class CapacityAnalyzer {
                 reason: 'El bloque termina después de medianoche, comprometiendo las 7-8 horas de descanso sagrado.',
             };
         }
-        // 5. Wind down check (after 22:30)
-        if (this.isWindDownPeriod(startTime, constraints)) {
+        // 5. Wind down check (after 22:30 or 22:00 if fatigued)
+        if (this.isWindDownPeriod(startTime, effectiveConstraints)) {
             if (taskType === 'ESTUDIO_PROFUNDO' || taskType === 'SIMULACRO' || taskType === 'EJERCICIOS') {
+                const timeLimit = effectiveConstraints.windDownStartTime;
                 return {
                     allowed: false,
-                    reason: 'Después de las 22:30 no se permite estudio de alta exigencia cognitiva. Se recomienda lectura ligera, relajación o descanso.',
+                    reason: `Después de las ${timeLimit} no se permite estudio de alta exigencia cognitiva. Se recomienda lectura ligera, relajación o descanso.`,
                 };
             }
         }
-        // 6. Maximum focus duration rule (max 120 minutes)
-        if (taskType === 'ESTUDIO_PROFUNDO' && durationMinutes > constraints.maxFocusBlockMinutes) {
+        // 6. Maximum focus duration rule (max 120 minutes or 60 minutes if fatigued)
+        if (taskType === 'ESTUDIO_PROFUNDO' && durationMinutes > effectiveConstraints.maxFocusBlockMinutes) {
             return {
                 allowed: false,
-                reason: `La capacidad máxima de concentración profunda es de ${constraints.maxFocusBlockMinutes} minutos. El bloque debe dividirse con descansos de 5-10 minutos.`,
+                reason: `La capacidad máxima de concentración profunda es de ${effectiveConstraints.maxFocusBlockMinutes} minutos${fatigue.isFatigued ? ' (reducida por protocolo de fatiga)' : ''}. El bloque debe dividirse con descansos de 5-10 minutos.`,
             };
         }
         return { allowed: true };

@@ -19,8 +19,8 @@ export async function fetchApi<T>(endpoint: string, options?: RequestInit): Prom
 
 export const api = {
   // Dashboard
-  getDashboard: (date?: string) =>
-    fetchApi<any>(`/dashboard${date ? `?date=${encodeURIComponent(date)}` : ''}`),
+  getDashboard: (date: string = new Date().toISOString()) =>
+    fetchApi<any>(`/dashboard?date=${encodeURIComponent(date)}`),
 
   // Calendar
   getCalendar: (start?: string, end?: string) =>
@@ -44,13 +44,13 @@ export const api = {
     fetchApi<any>(`/recurring-rules/${id}`, { method: 'DELETE' }),
 
   // Subjects & Academic
-  getSubjects: (date?: string) =>
-    fetchApi<any[]>(`/subjects${date ? `?date=${encodeURIComponent(date)}` : ''}`),
+  getSubjects: (date: string = new Date().toISOString()) =>
+    fetchApi<any[]>(`/subjects?date=${encodeURIComponent(date)}`),
   getSubjectById: (id: string) => fetchApi<any>(`/subjects/${id}`),
   createSubject: (data: any) =>
     fetchApi<any>('/subjects', { method: 'POST', body: JSON.stringify(data) }),
-  getExams: (date?: string) =>
-    fetchApi<any[]>(`/exams${date ? `?date=${encodeURIComponent(date)}` : ''}`),
+  getExams: (date: string = new Date().toISOString()) =>
+    fetchApi<any[]>(`/exams?date=${encodeURIComponent(date)}`),
   createExam: (data: any) =>
     fetchApi<any>('/exams', { method: 'POST', body: JSON.stringify(data) }),
   getTasks: (subjectId?: string) =>
@@ -68,9 +68,9 @@ export const api = {
     fetchApi<any>('/planning/generate-week', { method: 'POST', body: JSON.stringify(options) }),
   applyWeek: (proposal: any) =>
     fetchApi<any>('/planning/apply-week', { method: 'POST', body: JSON.stringify({ proposal }) }),
-  planDay: (date?: string) =>
+  planDay: (date: string = new Date().toISOString()) =>
     fetchApi<any>('/planning/plan-day', { method: 'POST', body: JSON.stringify({ date }) }),
-  replanTask: (taskId: string, date?: string) =>
+  replanTask: (taskId: string, date: string = new Date().toISOString()) =>
     fetchApi<any>('/planning/replan', { method: 'POST', body: JSON.stringify({ taskId, date }) }),
 
   // Habits & Health
@@ -85,6 +85,6 @@ export const api = {
   getRecommendations: () => fetchApi<any[]>('/recommendations'),
   dismissRecommendation: (id: string) =>
     fetchApi<any>(`/recommendations/${id}/dismiss`, { method: 'PATCH' }),
-  getStatistics: (date?: string) =>
-    fetchApi<any>(`/statistics${date ? `?date=${encodeURIComponent(date)}` : ''}`),
+  getStatistics: (date: string = new Date().toISOString()) =>
+    fetchApi<any>(`/statistics?date=${encodeURIComponent(date)}`),
 };

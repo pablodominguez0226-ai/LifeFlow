@@ -5,7 +5,7 @@ import { prisma } from '../db';
 export class ExamController {
   public static async getExams(req: Request, res: Response) {
     try {
-      const refDate = req.query.date ? new Date(req.query.date as string) : new Date('2026-09-02T12:00:00Z');
+      const refDate = req.query.date ? new Date(req.query.date as string) : new Date();
       const exams = await AcademicService.getExamsSortedByPriority(refDate);
       res.json(exams);
     } catch (error: any) {

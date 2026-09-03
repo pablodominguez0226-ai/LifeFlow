@@ -26,7 +26,7 @@ export class CheckinController {
     try {
       const { date, sleepHours, energyLevel, stressLevel, studyHoursDone, workoutDone, notes } = req.body;
       const checkin = await HabitService.createCheckIn({
-        date: date ? new Date(date) : new Date('2026-09-02T12:00:00Z'),
+        date: date ? new Date(date) : new Date(),
         sleepHours: Number(sleepHours) || 7.0,
         energyLevel: Number(energyLevel) || 3,
         stressLevel: Number(stressLevel) || 3,

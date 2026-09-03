@@ -32,7 +32,7 @@ export const AcademicView: React.FC = () => {
   const loadSubjects = async () => {
     try {
       setLoading(true);
-      const res = await api.getSubjects('2026-09-02T12:00:00Z');
+      const res = await api.getSubjects(new Date().toISOString());
       setSubjects(res);
       if (!selectedSubject && res.length > 0) {
         setSelectedSubject(res[0]);

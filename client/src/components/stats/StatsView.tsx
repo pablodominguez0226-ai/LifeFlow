@@ -14,7 +14,7 @@ export const StatsView: React.FC = () => {
     const loadStats = async () => {
       try {
         setLoading(true);
-        const res = await api.getStatistics('2026-09-02T12:00:00Z');
+        const res = await api.getStatistics(new Date().toISOString());
         setStats(res);
       } catch (err) {
         console.error(err);

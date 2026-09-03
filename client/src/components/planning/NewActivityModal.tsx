@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { api } from '../../api/client';
 import { X } from 'lucide-react';
+import { format } from 'date-fns';
 
 interface NewActivityModalProps {
   isOpen: boolean;
@@ -15,7 +16,7 @@ export const NewActivityModal: React.FC<NewActivityModalProps> = ({
 }) => {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('ACADEMIA');
-  const [date, setDate] = useState('2026-09-02');
+  const [date, setDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
   const [time, setTime] = useState('14:00');
   const [durationMinutes, setDurationMinutes] = useState(60);
   const [flexibility, setFlexibility] = useState('FLEXIBLE');

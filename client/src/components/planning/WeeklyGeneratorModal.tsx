@@ -7,7 +7,7 @@ import {
   AlertTriangle,
   RefreshCw,
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, startOfWeek } from 'date-fns';
 
 interface WeeklyGeneratorModalProps {
   isOpen: boolean;
@@ -20,7 +20,9 @@ export const WeeklyGeneratorModal: React.FC<WeeklyGeneratorModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const [mondayDate, setMondayDate] = useState('2026-08-31');
+  const [mondayDate, setMondayDate] = useState(() =>
+    format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd')
+  );
   const [gymSessions, setGymSessions] = useState(4);
   const [enableRugby, setEnableRugby] = useState(true);
   const [enableMarket, setEnableMarket] = useState(false);

@@ -6,7 +6,7 @@ const db_1 = require("../db");
 class ExamController {
     static async getExams(req, res) {
         try {
-            const refDate = req.query.date ? new Date(req.query.date) : new Date('2026-09-02T12:00:00Z');
+            const refDate = req.query.date ? new Date(req.query.date) : new Date();
             const exams = await academicService_1.AcademicService.getExamsSortedByPriority(refDate);
             res.json(exams);
         }

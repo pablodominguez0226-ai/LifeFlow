@@ -5,7 +5,7 @@ export class DashboardController {
   public static async getSummary(req: Request, res: Response) {
     try {
       const dateQuery = req.query.date as string;
-      const refDate = dateQuery ? new Date(dateQuery) : new Date('2026-09-02T12:00:00Z');
+      const refDate = dateQuery ? new Date(dateQuery) : new Date();
       const data = await PlanningService.getDashboardSummary(refDate);
       res.json(data);
     } catch (error: any) {

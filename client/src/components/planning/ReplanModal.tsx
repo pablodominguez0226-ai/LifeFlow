@@ -27,7 +27,7 @@ export const ReplanModal: React.FC<ReplanModalProps> = ({ taskId, onClose, onSuc
     try {
       setLoading(true);
       setError(null);
-      const res = await api.replanTask(taskId, '2026-09-02T12:00:00Z');
+      const res = await api.replanTask(taskId, new Date().toISOString());
       setData(res);
     } catch (err: any) {
       setError(err.message);

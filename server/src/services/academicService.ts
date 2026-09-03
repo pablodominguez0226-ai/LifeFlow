@@ -3,7 +3,7 @@ import { differenceInCalendarDays } from 'date-fns';
 import { PriorityScorer } from '../engine/priorityScorer';
 
 export class AcademicService {
-  public static async getSubjectsWithDetails(referenceDate: Date = new Date('2026-09-02T12:00:00Z')) {
+  public static async getSubjectsWithDetails(referenceDate: Date = new Date()) {
     const subjects = await prisma.subject.findMany({
       include: {
         exams: {
@@ -81,7 +81,7 @@ export class AcademicService {
     });
   }
 
-  public static async getExamsSortedByPriority(referenceDate: Date = new Date('2026-09-02T12:00:00Z')) {
+  public static async getExamsSortedByPriority(referenceDate: Date = new Date()) {
     const exams = await prisma.exam.findMany({
       include: {
         subject: true,

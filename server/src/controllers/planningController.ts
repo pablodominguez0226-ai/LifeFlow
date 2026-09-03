@@ -1,11 +1,14 @@
 import { Request, Response } from 'express';
 import { PlanningService } from '../services/planningService';
+import { startOfWeek } from 'date-fns';
 
 export class PlanningController {
   public static async generateWeek(req: Request, res: Response) {
     try {
       const { mondayDate, enableRugby, enableMarket, gymSessionsTarget } = req.body;
-      const targetMonday = mondayDate ? new Date(mondayDate) : new Date('2026-08-31T00:00:00Z');
+      const targetMonday = mondayDate
+        ? new Date(mondayDate)
+        : startOfWeek(new Date(), { weekStartsOn: 1 });
 
       const proposal = await PlanningService.generateWeekProposal(targetMonday, {
         enableRugby,
@@ -35,8 +38,8 @@ export class PlanningController {
 
   public static async planDay(req: Request, res: Response) {
     try {
-      const dateStr = req.body.date || req.query.date;
-      const targetDate = dateStr ? new Date(dateStr as string) : new Date('2026-09-02T12:00:00Z');
+      const dateStr = req.body?.date || req.query?.date;
+      const targetDate = dateStr ? new Date(dateStr as string) : new Date();
 
       const plan = await PlanningService.planDay(targetDate);
       res.json(plan);
@@ -52,7 +55,7 @@ export class PlanningController {
         return res.status(400).json({ error: 'taskId es requerido para replanificar.' });
       }
 
-      const currentDate = date ? new Date(date) : new Date('2026-09-02T12:00:00Z');
+      const currentDate = date ? new Date(date) : new Date();
       const replanResult = await PlanningService.replanTask(taskId, currentDate);
       res.json(replanResult);
     } catch (error: any) {

@@ -4,7 +4,7 @@ exports.StatsService = void 0;
 const db_1 = require("../db");
 const date_fns_1 = require("date-fns");
 class StatsService {
-    static async getWeeklyStatistics(referenceDate = new Date('2026-09-02T12:00:00Z')) {
+    static async getWeeklyStatistics(referenceDate = new Date()) {
         const user = await db_1.prisma.user.findFirst();
         if (!user)
             throw new Error('No user found');
