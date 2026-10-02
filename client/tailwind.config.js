@@ -8,6 +8,11 @@ export default {
   theme: {
     extend: {
       colors: {
+        chalk: {
+          DEFAULT: 'var(--chalk-primary)',
+          hover: 'var(--chalk-hover)',
+          dark: 'var(--chalk-dark)',
+        },
         dark: {
           bg: 'var(--bg-main)',
           secondary: 'var(--bg-secondary)',
