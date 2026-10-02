@@ -40,7 +40,7 @@ export const StatsView: React.FC = () => {
       case 'Moderado':
         return 'bg-[#2B1705] text-amber-400 border-[#5C2F09]';
       default:
-        return 'bg-[#260505] text-red-primary border-[#5C1313]';
+        return 'bg-[#18181B] text-zinc-300 border-[#27272A]';
     }
   };
 
@@ -57,12 +57,12 @@ export const StatsView: React.FC = () => {
       </div>
 
       {/* Main Score Banner: Cumplimiento Sostenible */}
-      <div className="bg-dark-card border border-dark-border p-6 rounded-2xl">
+      <div className="bg-[#121215] border border-[#27272A] p-6 rounded-2xl">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="space-y-1.5 text-center sm:text-left">
             <div className="flex items-center gap-2 justify-center sm:justify-start">
-              <ShieldCheck className="w-5 h-5 text-red-intense" />
-              <span className="text-xs font-bold uppercase tracking-wider text-red-intense">
+              <ShieldCheck className="w-5 h-5 text-zinc-300" />
+              <span className="text-xs font-bold uppercase tracking-wider text-zinc-400 font-mono">
                 Métrica Maestra de Rendimiento
               </span>
             </div>
@@ -91,33 +91,33 @@ export const StatsView: React.FC = () => {
         </div>
 
         {/* 4 Pillars of Sustainable Score */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-5 border-t border-dark-borderSubtle">
-          <div className="p-3.5 bg-dark-cardSecondary rounded-xl border border-dark-borderSubtle">
-            <span className="text-[10px] uppercase tracking-wider text-zinc-500 block">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-5 border-t border-[#27272A]">
+          <div className="p-3.5 bg-[#18181B] rounded-xl border border-[#27272A]">
+            <span className="text-[10px] uppercase tracking-wider text-zinc-500 block font-mono">
               Salud del Sueño
             </span>
             <span className="text-lg font-bold font-mono text-white">
               {stats.scoreBreakdown.sleepScore}/30
             </span>
           </div>
-          <div className="p-3.5 bg-dark-cardSecondary rounded-xl border border-dark-borderSubtle">
-            <span className="text-[10px] uppercase tracking-wider text-zinc-500 block">
+          <div className="p-3.5 bg-[#18181B] rounded-xl border border-[#27272A]">
+            <span className="text-[10px] uppercase tracking-wider text-zinc-500 block font-mono">
               Entrenamiento Físico
             </span>
             <span className="text-lg font-bold font-mono text-white">
               {stats.scoreBreakdown.workoutScore}/25
             </span>
           </div>
-          <div className="p-3.5 bg-dark-cardSecondary rounded-xl border border-dark-borderSubtle">
-            <span className="text-[10px] uppercase tracking-wider text-zinc-500 block">
+          <div className="p-3.5 bg-[#18181B] rounded-xl border border-[#27272A]">
+            <span className="text-[10px] uppercase tracking-wider text-zinc-500 block font-mono">
               Control del Estrés
             </span>
             <span className="text-lg font-bold font-mono text-white">
               {stats.scoreBreakdown.stressScore}/25
             </span>
           </div>
-          <div className="p-3.5 bg-dark-cardSecondary rounded-xl border border-dark-borderSubtle">
-            <span className="text-[10px] uppercase tracking-wider text-zinc-500 block">
+          <div className="p-3.5 bg-[#18181B] rounded-xl border border-[#27272A]">
+            <span className="text-[10px] uppercase tracking-wider text-zinc-500 block font-mono">
               Avance de Estudio
             </span>
             <span className="text-lg font-bold font-mono text-white">
@@ -130,9 +130,9 @@ export const StatsView: React.FC = () => {
       {/* Breakdown: Hours by Category */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left: Category Hours (7 cols) */}
-        <div className="lg:col-span-7 bg-dark-card border border-dark-border rounded-2xl p-6 space-y-4">
+        <div className="lg:col-span-7 bg-[#121215] border border-[#27272A] rounded-2xl p-6 space-y-4">
           <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-red-intense" />
+            <BarChart3 className="w-4 h-4 text-zinc-300" />
             Distribución Semanal de Horas Planificadas
           </h3>
 
@@ -148,9 +148,9 @@ export const StatsView: React.FC = () => {
                     <span className="text-white font-medium">{category}</span>
                     <span className="text-zinc-400 font-bold">{hours} horas</span>
                   </div>
-                  <div className="w-full bg-zinc-900 rounded-full h-1.5 overflow-hidden">
+                  <div className="w-full bg-[#18181B] rounded-full h-1.5 overflow-hidden border border-[#27272A]">
                     <div
-                      className="h-1.5 rounded-full bg-red-intense transition-all"
+                      className="h-1.5 rounded-full bg-white transition-all"
                       style={{ width: `${pct}%` }}
                     />
                   </div>
@@ -161,43 +161,43 @@ export const StatsView: React.FC = () => {
         </div>
 
         {/* Right: Key Summary Metrics (5 cols) */}
-        <div className="lg:col-span-5 bg-dark-card border border-dark-border rounded-2xl p-6 space-y-4 flex flex-col justify-between">
+        <div className="lg:col-span-5 bg-[#121215] border border-[#27272A] rounded-2xl p-6 space-y-4 flex flex-col justify-between">
           <div>
             <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-4">
-              <TrendingUp className="w-4 h-4 text-red-intense" />
+              <TrendingUp className="w-4 h-4 text-zinc-300" />
               Resumen Operativo
             </h3>
 
             <div className="space-y-2.5 text-xs font-mono">
-              <div className="flex justify-between p-3 bg-dark-cardSecondary rounded-xl border border-dark-borderSubtle">
+              <div className="flex justify-between p-3 bg-[#18181B] rounded-xl border border-[#27272A]">
                 <span className="text-zinc-400">Promedio de Sueño:</span>
                 <span className="font-bold text-white">{stats.metrics.avgSleep}h / noche</span>
               </div>
 
-              <div className="flex justify-between p-3 bg-dark-cardSecondary rounded-xl border border-dark-borderSubtle">
+              <div className="flex justify-between p-3 bg-[#18181B] rounded-xl border border-[#27272A]">
                 <span className="text-zinc-400">Gimnasio Realizado:</span>
-                <span className="font-bold text-accent-orange">
+                <span className="font-bold text-zinc-200">
                   {stats.metrics.workoutSessionsThisWeek} de {stats.metrics.targetWorkouts} sesiones
                 </span>
               </div>
 
-              <div className="flex justify-between p-3 bg-dark-cardSecondary rounded-xl border border-dark-borderSubtle">
+              <div className="flex justify-between p-3 bg-[#18181B] rounded-xl border border-[#27272A]">
                 <span className="text-zinc-400">Estudio Registrado:</span>
                 <span className="font-bold text-white">
                   {stats.metrics.studyHoursLogged} horas
                 </span>
               </div>
 
-              <div className="flex justify-between p-3 bg-dark-cardSecondary rounded-xl border border-dark-borderSubtle">
+              <div className="flex justify-between p-3 bg-[#18181B] rounded-xl border border-[#27272A]">
                 <span className="text-zinc-400">Tareas Pendientes:</span>
-                <span className="font-bold text-red-intense">
+                <span className="font-bold text-zinc-200">
                   {stats.metrics.pendingTasks} tareas activas
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="p-3.5 bg-[#240606] border border-[#5C1313] rounded-xl text-[11px] text-red-200">
+          <div className="p-3.5 bg-[#18181B] border border-[#27272A] rounded-xl text-[11px] text-zinc-300">
             <strong className="text-white">Fase Macro 1 Activa:</strong> Foco en Paradigmas 1P (25/09) manteniendo avances sostenidos en el Final de Diseño (08/10).
           </div>
         </div>

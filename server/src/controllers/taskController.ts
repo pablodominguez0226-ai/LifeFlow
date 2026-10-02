@@ -1,12 +1,15 @@
 import { Request, Response } from 'express';
 import { AcademicService } from '../services/academicService';
 import { prisma } from '../db';
+import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 
 export class TaskController {
   public static async getTasks(req: Request, res: Response) {
     try {
+      const userId = (req as AuthenticatedRequest).userId;
       const { subjectId, status } = req.query;
       const where: any = {};
+      if (userId) where.userId = userId;
       if (subjectId) where.subjectId = subjectId as string;
       if (status) where.status = status as string;
 
@@ -28,8 +31,10 @@ export class TaskController {
 
   public static async createTask(req: Request, res: Response) {
     try {
+      const userId = (req as AuthenticatedRequest).userId;
       const { subjectId, examId, topicId, title, taskType, estimatedMinutes, energyLevel, dueDate } = req.body;
       const task = await AcademicService.createTask({
+        userId,
         subjectId,
         examId,
         topicId,

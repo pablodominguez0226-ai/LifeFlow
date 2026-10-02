@@ -47,14 +47,14 @@ export const DailyPlanModal: React.FC<DailyPlanModalProps> = ({ isOpen, onClose 
         {slots.map((slot: any, i: number) => (
           <div
             key={i}
-            className="p-3 bg-dark-cardSecondary border border-dark-borderSubtle rounded-xl space-y-1 text-xs"
+            className="p-3 bg-[#18181B] border border-[#27272A] rounded-xl space-y-1 text-xs"
           >
             <div className="flex items-center justify-between">
-              <span className="font-mono font-bold text-red-intense">
+              <span className="font-mono font-semibold text-zinc-300">
                 {format(new Date(slot.startTime), 'HH:mm')} -{' '}
                 {format(new Date(slot.endTime), 'HH:mm')} ({slot.durationMinutes} min)
               </span>
-              <span className="text-[9px] uppercase font-bold px-2 py-0.5 rounded bg-black text-zinc-300 border border-dark-border font-mono">
+              <span className="text-[9px] uppercase font-bold px-2 py-0.5 rounded bg-[#09090B] text-zinc-400 border border-[#27272A] font-mono">
                 {slot.energyLevel} Energía
               </span>
             </div>
@@ -73,15 +73,16 @@ export const DailyPlanModal: React.FC<DailyPlanModalProps> = ({ isOpen, onClose 
   };
 
   return (
-    <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-dark-card border border-dark-border rounded-2xl max-w-2xl w-full p-6 space-y-5 max-h-[90vh] overflow-y-auto shadow-2xl">
-        <div className="flex items-start justify-between">
+    <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6">
+      <div className="bg-[#121215] border border-[#27272A] rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        {/* Header */}
+        <div className="px-4 sm:px-6 py-4 border-b border-zinc-800 shrink-0 flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-red-intense/10 border border-red-intense/30 flex items-center justify-center">
-              <Clock className="w-5 h-5 text-red-intense" />
+            <div className="w-10 h-10 rounded-xl bg-[#18181B] border border-[#27272A] flex items-center justify-center">
+              <Clock className="w-5 h-5 text-zinc-300" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white">Planificar Mi Día</h3>
+              <h3 className="text-base sm:text-lg font-bold text-white">Planificar Mi Día</h3>
               <p className="text-xs text-zinc-400">
                 Distribución estratégica por franjas horarias con justificación cognitiva
               </p>
@@ -89,102 +90,106 @@ export const DailyPlanModal: React.FC<DailyPlanModalProps> = ({ isOpen, onClose 
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-dark-cardHover"
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-[#18181B] transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Date Selector */}
-        <div className="flex items-center justify-between bg-dark-cardSecondary p-3 rounded-xl border border-dark-borderSubtle">
-          <label className="text-xs text-zinc-300 font-medium">Fecha a planificar:</label>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="bg-black border border-dark-border rounded-lg px-3 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-red-intense"
-          />
+        {/* Scrollable Body */}
+        <div className="flex-1 overflow-y-auto pr-1 px-4 sm:px-6 py-4 space-y-5">
+          {/* Date Selector */}
+          <div className="flex items-center justify-between bg-[#18181B] p-3 rounded-xl border border-[#27272A]">
+            <label className="text-xs text-zinc-300 font-medium">Fecha a planificar:</label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="bg-[#09090B] border border-[#27272A] rounded-lg px-3 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-zinc-500"
+            />
+          </div>
+
+          {loading ? (
+            <div className="py-12 flex justify-center items-center text-xs text-zinc-400 gap-2">
+              <RefreshCw className="w-4 h-4 animate-spin text-zinc-400" />
+              Consultando agenda del día...
+            </div>
+          ) : plan ? (
+            <div className="space-y-5">
+              {/* Summary */}
+              <div className="p-3 bg-[#18181B] border border-[#27272A] rounded-xl text-xs text-zinc-200 flex justify-between items-center">
+                <span>{plan.summary}</span>
+                <span className="font-mono uppercase font-bold text-zinc-400">
+                  {plan.overloadLevel}
+                </span>
+              </div>
+
+              {/* Fatigue Warning Banner */}
+              {plan.fatigueAdjustment?.isFatigued && (
+                <div className="p-3.5 bg-red-950/40 border border-red-800/60 rounded-xl space-y-1.5 text-xs text-red-200">
+                  <div className="flex items-center gap-2 text-red-400 font-bold text-xs uppercase tracking-wide">
+                    <AlertTriangle className="w-4 h-4" />
+                    <span>Protocolo de Fatiga & Sueño Activado</span>
+                  </div>
+                  <p className="text-zinc-300 text-[11px] leading-relaxed">
+                    {plan.fatigueAdjustment.recommendedAction}
+                  </p>
+                  {plan.fatigueAdjustment.warnings?.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {plan.fatigueAdjustment.warnings.map((w: string, idx: number) => (
+                        <span
+                          key={idx}
+                          className="px-2 py-0.5 rounded bg-black/60 border border-red-900/50 text-[10px] text-red-300 font-mono"
+                        >
+                          {w}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 1. MAÑANA (07:00 - 13:00) */}
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Sun className="w-4 h-4 text-zinc-400" />
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+                    Mañana (07:00 — 13:00)
+                  </h4>
+                </div>
+                {renderSlotList(plan.morning)}
+              </div>
+
+              {/* 2. TARDE (13:00 - 19:00) */}
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Sunset className="w-4 h-4 text-zinc-400" />
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+                    Tarde (13:00 — 19:00)
+                  </h4>
+                </div>
+                {renderSlotList(plan.afternoon)}
+              </div>
+
+              {/* 3. NOCHE (19:00 - 23:30) */}
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Moon className="w-4 h-4 text-zinc-400" />
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+                    Noche (19:00 — 23:30)
+                  </h4>
+                </div>
+                {renderSlotList(plan.evening)}
+              </div>
+            </div>
+          ) : null}
         </div>
 
-        {loading ? (
-          <div className="py-12 flex justify-center items-center text-xs text-zinc-400 gap-2">
-            <RefreshCw className="w-4 h-4 animate-spin text-red-intense" />
-            Consultando agenda del día...
-          </div>
-        ) : plan ? (
-          <div className="space-y-5">
-            {/* Summary */}
-            <div className="p-3 bg-dark-cardSecondary border border-dark-border rounded-xl text-xs text-zinc-200 flex justify-between items-center">
-              <span>{plan.summary}</span>
-              <span className="font-mono uppercase font-bold text-red-intense">
-                {plan.overloadLevel}
-              </span>
-            </div>
-
-            {/* Fatigue Warning Banner */}
-            {plan.fatigueAdjustment?.isFatigued && (
-              <div className="p-3.5 bg-red-950/40 border border-red-800/60 rounded-xl space-y-1.5 text-xs text-red-200">
-                <div className="flex items-center gap-2 text-red-400 font-bold text-xs uppercase tracking-wide">
-                  <AlertTriangle className="w-4 h-4" />
-                  <span>Protocolo de Fatiga & Sueño Activado</span>
-                </div>
-                <p className="text-zinc-300 text-[11px] leading-relaxed">
-                  {plan.fatigueAdjustment.recommendedAction}
-                </p>
-                {plan.fatigueAdjustment.warnings?.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {plan.fatigueAdjustment.warnings.map((w: string, idx: number) => (
-                      <span
-                        key={idx}
-                        className="px-2 py-0.5 rounded bg-black/60 border border-red-900/50 text-[10px] text-red-300 font-mono"
-                      >
-                        {w}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* 1. MAÑANA (07:00 - 13:00) */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Sun className="w-4 h-4 text-accent-orange" />
-                <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-200">
-                  Mañana (07:00 — 13:00)
-                </h4>
-              </div>
-              {renderSlotList(plan.morning)}
-            </div>
-
-            {/* 2. TARDE (13:00 - 19:00) */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Sunset className="w-4 h-4 text-red-intense" />
-                <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-200">
-                  Tarde (13:00 — 19:00)
-                </h4>
-              </div>
-              {renderSlotList(plan.afternoon)}
-            </div>
-
-            {/* 3. NOCHE (19:00 - 23:30) */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Moon className="w-4 h-4 text-red-intense" />
-                <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-200">
-                  Noche (19:00 — 23:30)
-                </h4>
-              </div>
-              {renderSlotList(plan.evening)}
-            </div>
-          </div>
-        ) : null}
-
-        <div className="flex justify-end pt-2 border-t border-dark-border">
+        {/* Sticky Footer */}
+        <div className="shrink-0 pt-4 border-t border-zinc-800 px-4 sm:px-6 pb-4 bg-[#121215] flex justify-end">
           <button
             onClick={onClose}
-            className="px-5 py-2 rounded-xl text-xs font-bold bg-dark-cardSecondary text-zinc-300 border border-dark-border hover:border-zinc-500 hover:text-white transition-colors"
+            className="px-5 py-2 rounded-xl text-xs font-semibold bg-[#18181B] text-zinc-300 border border-[#27272A] hover:border-zinc-500 hover:text-white transition-colors cursor-pointer"
           >
             Entendido
           </button>

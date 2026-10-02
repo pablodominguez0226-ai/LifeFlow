@@ -13,13 +13,16 @@ import {
   TimeSlot,
   UserEnergyContext,
 } from '../engine';
+import { HabitService } from './habitService';
 
 export class PlanningService {
   /**
    * Builds the comprehensive Dashboard "Hoy" payload
    */
-  public static async getDashboardSummary(referenceDate: Date = new Date()) {
-    const user = await prisma.user.findFirst();
+  public static async getDashboardSummary(referenceDate: Date = new Date(), userId?: string) {
+    const user = userId
+      ? await prisma.user.findUnique({ where: { id: userId } })
+      : await prisma.user.findFirst();
     if (!user) throw new Error('No user found');
 
     const startOfDay = new Date(referenceDate);
@@ -38,6 +41,7 @@ export class PlanningService {
     // 1. Get today's checkin if exists
     const todayCheckin = await prisma.dailyCheckIn.findFirst({
       where: {
+        userId: user.id,
         date: {
           gte: minStart,
           lte: maxEnd,
@@ -49,6 +53,7 @@ export class PlanningService {
     // 2. Get today's schedule blocks
     const todayBlocks = await prisma.scheduleBlock.findMany({
       where: {
+        userId: user.id,
         startTime: {
           gte: minStart,
           lte: maxEnd,
@@ -75,6 +80,7 @@ export class PlanningService {
 
     // 6. Upcoming exams
     const exams = await prisma.exam.findMany({
+      where: { userId: user.id },
       include: { subject: true },
       orderBy: { date: 'asc' },
     });
@@ -104,10 +110,58 @@ export class PlanningService {
 
     // 8. Active recommendations
     const recommendations = await prisma.recommendation.findMany({
-      where: { dismissed: false },
+      where: { userId: user.id, dismissed: false },
       orderBy: { createdAt: 'desc' },
       take: 4,
     });
+
+    // 9. Guided Study Focus (Foco Académico Guiado)
+    const pendingReviewTopic = await prisma.academicTopic.findFirst({
+      where: {
+        status: 'REVISION_PENDIENTE',
+        unit: { subject: { userId: user.id } },
+      },
+      include: {
+        unit: {
+          include: { subject: true },
+        },
+      },
+      orderBy: { lastStudiedAt: 'asc' },
+    });
+
+    const nextNewTopic = await prisma.academicTopic.findFirst({
+      where: {
+        status: 'PENDIENTE',
+        unit: { subject: { userId: user.id } },
+      },
+      include: {
+        unit: {
+          include: { subject: true },
+        },
+      },
+      orderBy: [
+        { unit: { unitNumber: 'asc' } },
+        { createdAt: 'asc' },
+      ],
+    });
+
+    // 10. Priority Tasks from Night Journal / Check-in
+    const priorityTasksData = await HabitService.getLatestPriorityTasks(user.id, referenceDate);
+
+    // 11. Morning Routine status (Lectura matutina -> Sesión de estudio)
+    const todayDateStr = format(referenceDate, 'yyyy-MM-dd');
+    const readingHabit = await prisma.habit.findFirst({
+      where: {
+        userId: user.id,
+        title: { contains: 'Lectura' },
+      },
+      include: {
+        logs: {
+          where: { date: todayDateStr, completed: true },
+        },
+      },
+    });
+    const isReadingCompletedToday = Boolean(readingHabit && readingHabit.logs.length > 0);
 
     return {
       currentDate: referenceDate,
@@ -130,9 +184,30 @@ export class PlanningService {
         targetSleepHours: user.targetSleepHours,
         actualSleepHours: todayCheckin?.sleepHours || 7.5,
         workoutDone: todayCheckin?.workoutDone || false,
+        workoutType: todayCheckin?.workoutType || null,
+        tradingResult: todayCheckin?.tradingResult || null,
+        tradingPipsRR: todayCheckin?.tradingPipsRR || null,
       },
       upcomingExams: upcomingExams.slice(0, 5),
       recommendations,
+      guidedStudy: {
+        pendingReviewTopic,
+        nextNewTopic,
+      },
+      priorityTasks: priorityTasksData,
+      morningRoutine: {
+        firstHabit: {
+          id: readingHabit?.id || 'habit_reading',
+          title: 'Lectura tranquila matutina (15-20 min)',
+          description: 'Activar la mente sin fatiga de estudio de golpe',
+          completed: isReadingCompletedToday,
+        },
+        secondBlock: {
+          title: 'Sesión de estudio / Trabajo profundo',
+          description: 'Foco cognitivo alto una vez activada la corteza prefrontal',
+          suggestedSubject: topExam ? `${topExam.subjectName} (${topExam.title})` : 'Diseño de Sistemas / Paradigmas',
+        },
+      },
     };
   }
 
@@ -141,17 +216,21 @@ export class PlanningService {
    */
   public static async generateWeekProposal(
     mondayDate: Date,
-    options: { enableRugby?: boolean; enableMarket?: boolean; gymSessionsTarget?: number } = {}
+    options: { enableRugby?: boolean; enableMarket?: boolean; gymSessionsTarget?: number } = {},
+    userId?: string
   ) {
-    const user = await prisma.user.findFirst();
+    const user = userId
+      ? await prisma.user.findUnique({ where: { id: userId } })
+      : await prisma.user.findFirst();
     if (!user) throw new Error('No user found');
 
     const subjects = await prisma.subject.findMany({
+      where: { userId: user.id },
       include: { exams: true, academicTasks: true },
     });
 
     const tasks = await prisma.academicTask.findMany({
-      where: { status: { not: 'COMPLETADA' } },
+      where: { userId: user.id, status: { not: 'COMPLETADA' } },
       include: { subject: true, exam: true },
     });
 
@@ -242,15 +321,20 @@ export class PlanningService {
   /**
    * Applies and saves the proposed week into the schedule table
    */
-  public static async applyWeekProposal(proposal: {
-    startDate: string | Date;
-    endDate: string | Date;
-    macroPhase: string;
-    blocks: TimeSlot[];
-    sustainabilityScore: number;
-    overloadReport: any;
-  }) {
-    const user = await prisma.user.findFirst();
+  public static async applyWeekProposal(
+    proposal: {
+      startDate: string | Date;
+      endDate: string | Date;
+      macroPhase: string;
+      blocks: TimeSlot[];
+      sustainabilityScore: number;
+      overloadReport: any;
+    },
+    userId?: string
+  ) {
+    const user = userId
+      ? await prisma.user.findUnique({ where: { id: userId } })
+      : await prisma.user.findFirst();
     if (!user) throw new Error('No user found');
 
     const startDate = new Date(proposal.startDate);
@@ -320,8 +404,10 @@ export class PlanningService {
    * Daily breakdown (Morning / Afternoon / Evening)
    * Integrates DailyCheckIn energy/fatigue feedback loop
    */
-  public static async planDay(targetDate: Date) {
-    const user = await prisma.user.findFirst();
+  public static async planDay(targetDate: Date, userId?: string) {
+    const user = userId
+      ? await prisma.user.findUnique({ where: { id: userId } })
+      : await prisma.user.findFirst();
     if (!user) throw new Error('No user found');
 
     const start = new Date(targetDate);
@@ -363,6 +449,7 @@ export class PlanningService {
 
     const blocks = await prisma.scheduleBlock.findMany({
       where: {
+        userId: user.id,
         startTime: { gte: start, lte: end },
       },
       orderBy: { startTime: 'asc' },
@@ -433,16 +520,18 @@ export class PlanningService {
   /**
    * Replanning options for missed task
    */
-  public static async replanTask(taskId: string, currentDate: Date = new Date()) {
+  public static async replanTask(taskId: string, currentDate: Date = new Date(), userId?: string) {
     const task = await prisma.academicTask.findUnique({
       where: { id: taskId },
       include: { subject: true, exam: true },
     });
     if (!task) throw new Error('Task not found');
 
+    const targetUserId = userId || task.userId || task.subject.userId;
+
     const checkin = await prisma.dailyCheckIn.findFirst({
       where: {
-        userId: task.subject.userId,
+        userId: targetUserId,
         date: { lte: currentDate },
       },
       orderBy: { date: 'desc' },
@@ -462,7 +551,10 @@ export class PlanningService {
     }
 
     const existingBlocks = await prisma.scheduleBlock.findMany({
-      where: { startTime: { gte: currentDate } },
+      where: {
+        userId: targetUserId,
+        startTime: { gte: currentDate },
+      },
     });
 
     const slots: TimeSlot[] = existingBlocks.map((b) => ({

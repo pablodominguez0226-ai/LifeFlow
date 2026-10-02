@@ -2,12 +2,14 @@ import { Request, Response } from 'express';
 import { ScheduleService } from '../services/scheduleService';
 import { IcalService } from '../services/icalService';
 import { startOfWeek, endOfWeek } from 'date-fns';
+import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 
 export class CalendarController {
   public static async getIcsFeed(req: Request, res: Response) {
     try {
       const { futureDays, pastDays, download } = req.query;
-      const icsData = await IcalService.generateIcsFeed(undefined, {
+      const userId = (req as AuthenticatedRequest).userId;
+      const icsData = await IcalService.generateIcsFeed(userId, {
         futureDays: futureDays ? Number(futureDays) : undefined,
         pastDays: pastDays ? Number(pastDays) : undefined,
       });
@@ -25,6 +27,7 @@ export class CalendarController {
   public static async getBlocks(req: Request, res: Response) {
     try {
       const { start, end, date } = req.query;
+      const userId = (req as AuthenticatedRequest).userId;
       let startDate: Date;
       let endDate: Date;
 
@@ -42,7 +45,7 @@ export class CalendarController {
         endDate = endOfWeek(startDate, { weekStartsOn: 1 });
       }
 
-      const blocks = await ScheduleService.getBlocksForRange(startDate, endDate);
+      const blocks = await ScheduleService.getBlocksForRange(startDate, endDate, userId);
       res.json(blocks);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -51,6 +54,7 @@ export class CalendarController {
 
   public static async createBlock(req: Request, res: Response) {
     try {
+      const userId = (req as AuthenticatedRequest).userId;
       const {
         title,
         startTime,
@@ -65,6 +69,7 @@ export class CalendarController {
       } = req.body;
 
       const block = await ScheduleService.createBlock({
+        userId,
         title,
         startTime: new Date(startTime),
         endTime: new Date(endTime),

@@ -3,33 +3,40 @@
 @tailwind utilities;
 
 :root {
-  /* LifeFlow Dark Red Design Tokens */
-  --bg-main: #000000;
-  --bg-secondary: #050505;
-  --card: #0a0a0a;
-  --card-secondary: #111111;
-  --card-hover: #151515;
-  --border: #242424;
-  --border-subtle: #1a1a1a;
-  --border-active: #e50914;
+  /* Obsidian & Chalk Design Tokens (Linear Style) */
+  --bg-main: #09090B;
+  --bg-secondary: #0D0D10;
+  --card: #121215;
+  --card-secondary: #18181B;
+  --card-hover: #202024;
+  --border: #27272A;
+  --border-subtle: #1E1E22;
+  --border-active: #FFFFFF;
 
-  --text-primary: #ffffff;
-  --text-secondary: #a1a1aa;
-  --text-muted: #71717a;
+  --text-primary: #FFFFFF;
+  --text-secondary: #A1A1AA;
+  --text-muted: #71717A;
 
-  /* Red Action Palette */
-  --red-primary: #ff0000;
-  --red-intense: #e50914;
-  --red-dark: #8b0000;
-  --red-hover: #ff3333;
-  --red-subtle: rgba(229, 9, 20, 0.12);
-  --red-border: rgba(229, 9, 20, 0.35);
+  /* Monochromatic Primary Chalk Palette */
+  --chalk-primary: #FFFFFF;
+  --chalk-hover: #E4E4E7;
+  --chalk-dark: #09090B;
+  --zinc-btn: #18181B;
+  --zinc-btn-hover: #27272A;
+
+  /* Red reserved strictly for critical emergencies and destructive actions */
+  --red-primary: #EF4444;
+  --red-intense: #DC2626;
+  --red-dark: #7F1D1D;
+  --red-hover: #F87171;
+  --red-subtle: rgba(220, 38, 38, 0.12);
+  --red-border: rgba(220, 38, 38, 0.35);
 
   /* Secondary Accents */
-  --accent-orange: #ff5a00;
-  --accent-orange-bg: rgba(255, 90, 0, 0.12);
-  --accent-green: #22c55e;
-  --accent-green-bg: #062310;
+  --accent-orange: #F97316;
+  --accent-orange-bg: rgba(249, 115, 22, 0.12);
+  --accent-green: #10B981;
+  --accent-green-bg: rgba(16, 185, 129, 0.12);
 }
 
 body {
@@ -38,23 +45,30 @@ body {
   background-color: var(--bg-main);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* Minimal Dark Red Scrollbars */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+}
+
+/* Minimalist Dark Scrollbars */
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #000000;
+  background: #09090B;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #242424;
+  background: #27272A;
   border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #e50914;
+  background: #3F3F46;
 }

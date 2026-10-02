@@ -2,21 +2,29 @@ import { prisma } from '../db';
 import { subDays } from 'date-fns';
 
 export class StatsService {
-  public static async getWeeklyStatistics(referenceDate: Date = new Date()) {
-    const user = await prisma.user.findFirst();
+  public static async getWeeklyStatistics(referenceDate: Date = new Date(), userId?: string) {
+    const user = userId
+      ? await prisma.user.findUnique({ where: { id: userId } })
+      : await prisma.user.findFirst();
     if (!user) throw new Error('No user found');
 
     const sevenDaysAgo = subDays(referenceDate, 7);
 
     // Fetch recent check-ins
     const checkIns = await prisma.dailyCheckIn.findMany({
-      where: { date: { gte: sevenDaysAgo, lte: referenceDate } },
+      where: {
+        userId: user.id,
+        date: { gte: sevenDaysAgo, lte: referenceDate },
+      },
       orderBy: { date: 'asc' },
     });
 
     // Fetch scheduled blocks in the last 7 days
     const blocks = await prisma.scheduleBlock.findMany({
-      where: { startTime: { gte: sevenDaysAgo, lte: referenceDate } },
+      where: {
+        userId: user.id,
+        startTime: { gte: sevenDaysAgo, lte: referenceDate },
+      },
     });
 
     // Calculate hours by category
@@ -52,8 +60,12 @@ export class StatsService {
     const totalStudyHoursLogged = checkIns.reduce((acc, c) => acc + c.studyHoursDone, 0);
 
     // Tasks metrics
-    const completedTasks = await prisma.academicTask.count({ where: { status: 'COMPLETADA' } });
-    const pendingTasks = await prisma.academicTask.count({ where: { status: 'PENDIENTE' } });
+    const completedTasks = await prisma.academicTask.count({
+      where: { userId: user.id, status: 'COMPLETADA' },
+    });
+    const pendingTasks = await prisma.academicTask.count({
+      where: { userId: user.id, status: 'PENDIENTE' },
+    });
 
     // Sustainable Achievement Score (Cumplimiento Sostenible)
     // Factors:

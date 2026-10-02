@@ -1,14 +1,19 @@
 import { prisma } from '../db';
 
 export class ScheduleService {
-  public static async getBlocksForRange(startDate: Date, endDate: Date) {
-    return prisma.scheduleBlock.findMany({
-      where: {
-        startTime: {
-          gte: startDate,
-          lte: endDate,
-        },
+  public static async getBlocksForRange(startDate: Date, endDate: Date, userId?: string) {
+    const where: any = {
+      startTime: {
+        gte: startDate,
+        lte: endDate,
       },
+    };
+    if (userId) {
+      where.userId = userId;
+    }
+
+    return prisma.scheduleBlock.findMany({
+      where,
       include: {
         academicTask: true,
         activity: true,

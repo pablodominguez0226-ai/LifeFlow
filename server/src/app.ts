@@ -1,3 +1,5 @@
+import path from 'path';
+import fs from 'fs';
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -28,7 +30,18 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   console.error('API Error:', err);
   res.status(500).json({ error: err.message || 'Internal Server Error' });
 });
+// Configuración robusta para servir el Frontend
+const clientDistPath = path.resolve(__dirname, '../../../../client/dist'); 
+// Si la compilación queda en dist/server/src o dist/src, usamos un fallback seguro:
+const finalDistPath = require('fs').existsSync(clientDistPath)
+  ? clientDistPath
+  : path.resolve('/home/pablo/apps/lifeflow/client/dist');
 
+app.use(express.static(finalDistPath));
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(finalDistPath, 'index.html'));
+});
 if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
     console.log(`===========================================`);

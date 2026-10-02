@@ -4,8 +4,10 @@ export class RecurringRuleService {
   /**
    * List all recurring rules for the default user
    */
-  public static async getRules() {
-    const user = await prisma.user.findFirst();
+  public static async getRules(userId?: string) {
+    const user = userId
+      ? await prisma.user.findUnique({ where: { id: userId } })
+      : await prisma.user.findFirst();
     if (!user) throw new Error('Usuario no encontrado');
 
     return prisma.recurringScheduleRule.findMany({
@@ -17,22 +19,27 @@ export class RecurringRuleService {
   /**
    * Create a new recurring rule
    */
-  public static async createRule(data: {
-    dayOfWeek: number;
-    startTime: string;
-    endTime: string;
-    durationMinutes?: number;
-    title: string;
-    category?: string;
-    flexibility?: string;
-    isFixed?: boolean;
-    energyLevel?: string;
-    justification?: string;
-    notes?: string;
-    location?: string;
-    isActive?: boolean;
-  }) {
-    const user = await prisma.user.findFirst();
+  public static async createRule(
+    userId: string | undefined,
+    data: {
+      dayOfWeek: number;
+      startTime: string;
+      endTime: string;
+      durationMinutes?: number;
+      title: string;
+      category?: string;
+      flexibility?: string;
+      isFixed?: boolean;
+      energyLevel?: string;
+      justification?: string;
+      notes?: string;
+      location?: string;
+      isActive?: boolean;
+    }
+  ) {
+    const user = userId
+      ? await prisma.user.findUnique({ where: { id: userId } })
+      : await prisma.user.findFirst();
     if (!user) throw new Error('Usuario no encontrado');
 
     // Calculate durationMinutes if not provided

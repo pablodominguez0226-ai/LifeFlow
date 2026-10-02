@@ -205,29 +205,29 @@ export const RecurringRulesModal: React.FC<RecurringRulesModalProps> = ({
   const getCategoryColor = (cat: string) => {
     switch (cat) {
       case 'ACADEMIA':
-        return 'bg-[#2A0808] text-red-300 border-[#5C1313]';
+        return 'bg-[#18181B] text-zinc-200 border-[#27272A]';
       case 'GIMNASIO':
-        return 'bg-[#291307] text-orange-300 border-[#5E2B0D]';
+        return 'bg-[#18181B] text-zinc-300 border-[#27272A]';
       case 'DEPORTE':
         return 'bg-[#0A2613] text-emerald-300 border-[#165E30]';
       case 'LECTURA':
-        return 'bg-[#181818] text-zinc-300 border-[#2A2A2A]';
+        return 'bg-[#18181B] text-zinc-300 border-[#27272A]';
       default:
-        return 'bg-zinc-900 text-zinc-400 border-zinc-800';
+        return 'bg-[#121215] text-zinc-400 border-[#27272A]';
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-dark-card border border-dark-border rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6">
+      <div className="bg-[#121215] border border-[#27272A] rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Modal Header */}
-        <div className="p-6 border-b border-dark-border flex items-center justify-between">
+        <div className="px-4 sm:px-6 py-4 border-b border-zinc-800 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-red-intense/10 border border-red-intense/30 flex items-center justify-center shrink-0">
-              <Calendar className="w-5 h-5 text-red-intense" />
+            <div className="w-10 h-10 rounded-xl bg-[#18181B] border border-[#27272A] flex items-center justify-center shrink-0">
+              <Calendar className="w-5 h-5 text-zinc-300" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white tracking-tight">
+              <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
                 Horarios Fijos & Cursadas Semanales
               </h2>
               <p className="text-xs text-zinc-400">
@@ -238,23 +238,23 @@ export const RecurringRulesModal: React.FC<RecurringRulesModalProps> = ({
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-dark-cardSecondary transition-colors"
+            className="p-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-[#18181B] transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto pr-1 px-4 sm:px-6 py-4 space-y-6">
           {/* Subheader: Filter by Day and Add Button */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             {/* Day Filter Pills */}
-            <div className="flex flex-wrap items-center gap-1.5 p-1 bg-dark-cardSecondary rounded-2xl border border-dark-borderSubtle">
+            <div className="flex flex-wrap items-center gap-1.5 p-1 bg-[#18181B] rounded-xl border border-[#27272A]">
               <button
                 onClick={() => setSelectedDayFilter('ALL')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   selectedDayFilter === 'ALL'
-                    ? 'bg-red-intense text-white shadow'
+                    ? 'bg-white text-zinc-950 shadow-sm'
                     : 'text-zinc-400 hover:text-white'
                 }`}
               >
@@ -266,9 +266,9 @@ export const RecurringRulesModal: React.FC<RecurringRulesModalProps> = ({
                   <button
                     key={d.value}
                     onClick={() => setSelectedDayFilter(d.value)}
-                    className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                       selectedDayFilter === d.value
-                        ? 'bg-red-intense text-white shadow'
+                        ? 'bg-white text-zinc-950 shadow-sm'
                         : 'text-zinc-400 hover:text-white'
                     }`}
                   >
@@ -280,26 +280,26 @@ export const RecurringRulesModal: React.FC<RecurringRulesModalProps> = ({
 
             <button
               onClick={handleOpenAdd}
-              className="flex items-center gap-2 px-4 py-2 bg-red-intense hover:bg-red-hover text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-red-intense/20 self-start sm:self-auto"
+              className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-[#E4E4E7] text-zinc-950 rounded-xl text-xs font-semibold transition-all shadow-sm self-start sm:self-auto cursor-pointer"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 text-zinc-950" />
               <span>+ Nuevo Horario Fijo</span>
             </button>
           </div>
 
           {/* Form Overlay / Drawer if Editing or Adding */}
           {isEditing && (
-            <div className="p-5 bg-dark-cardSecondary border border-red-intense/40 rounded-2xl space-y-4 animate-in fade-in duration-200">
-              <div className="flex items-center justify-between border-b border-dark-borderSubtle pb-3">
+            <div className="p-5 bg-[#18181B] border border-[#27272A] rounded-2xl space-y-4 animate-in fade-in duration-200">
+              <div className="flex items-center justify-between border-b border-[#27272A] pb-3">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-red-intense" />
+                  <Sparkles className="w-4 h-4 text-zinc-300" />
                   <h3 className="text-sm font-bold text-white">
                     {editingId ? 'Editar Horario Fijo' : 'Crear Nuevo Horario Fijo'}
                   </h3>
                 </div>
                 <button
                   onClick={() => setIsEditing(false)}
-                  className="text-zinc-500 hover:text-white text-xs"
+                  className="text-zinc-500 hover:text-white text-xs cursor-pointer"
                 >
                   Cancelar
                 </button>
@@ -324,7 +324,7 @@ export const RecurringRulesModal: React.FC<RecurringRulesModalProps> = ({
                       value={formData.title}
                       onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                       placeholder="Ej. Cursada: Inteligencia Artificial"
-                      className="w-full bg-black border border-dark-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-intense"
+                      className="w-full bg-[#09090B] border border-[#27272A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-zinc-500"
                     />
                   </div>
 
@@ -338,7 +338,7 @@ export const RecurringRulesModal: React.FC<RecurringRulesModalProps> = ({
                       onChange={(e) =>
                         setFormData({ ...formData, dayOfWeek: Number(e.target.value) })
                       }
-                      className="w-full bg-black border border-dark-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-intense"
+                      className="w-full bg-[#09090B] border border-[#27272A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-zinc-500"
                     >
                       {DAY_NAMES.map((d) => (
                         <option key={d.value} value={d.value}>
@@ -359,7 +359,7 @@ export const RecurringRulesModal: React.FC<RecurringRulesModalProps> = ({
                       type="time"
                       value={formData.startTime}
                       onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                      className="w-full bg-black border border-dark-border rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-red-intense"
+                      className="w-full bg-[#09090B] border border-[#27272A] rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-zinc-500"
                     />
                   </div>
 
@@ -372,7 +372,7 @@ export const RecurringRulesModal: React.FC<RecurringRulesModalProps> = ({
                       type="time"
                       value={formData.endTime}
                       onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                      className="w-full bg-black border border-dark-border rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-red-intense"
+                      className="w-full bg-[#09090B] border border-[#27272A] rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-zinc-500"
                     />
                   </div>
 
@@ -384,7 +384,7 @@ export const RecurringRulesModal: React.FC<RecurringRulesModalProps> = ({
                     <select
                       value={formData.category}
                       onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      className="w-full bg-black border border-dark-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-intense"
+                      className="w-full bg-[#09090B] border border-[#27272A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-zinc-500"
                     >
                       <option value="ACADEMIA">Academia (Cursada/Consulta)</option>
                       <option value="GIMNASIO">Gimnasio</option>
@@ -409,7 +409,7 @@ export const RecurringRulesModal: React.FC<RecurringRulesModalProps> = ({
                           isFixed: e.target.value === 'FIJA',
                         })
                       }
-                      className="w-full bg-black border border-dark-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-intense"
+                      className="w-full bg-[#09090B] border border-[#27272A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-zinc-500"
                     >
                       <option value="FIJA">FIJA (Inamovible)</option>
                       <option value="FLEXIBLE">FLEXIBLE (Reubicable)</option>
@@ -429,7 +429,7 @@ export const RecurringRulesModal: React.FC<RecurringRulesModalProps> = ({
                       value={formData.location}
                       onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                       placeholder="Ej. Facultad (10 min traslado)"
-                      className="w-full bg-black border border-dark-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-intense"
+                      className="w-full bg-[#09090B] border border-[#27272A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-zinc-500"
                     />
                   </div>
 
@@ -443,7 +443,7 @@ export const RecurringRulesModal: React.FC<RecurringRulesModalProps> = ({
                       value={formData.justification}
                       onChange={(e) => setFormData({ ...formData, justification: e.target.value })}
                       placeholder="Ej. Cursada universitaria obligatoria"
-                      className="w-full bg-black border border-dark-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-intense"
+                      className="w-full bg-[#09090B] border border-[#27272A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-zinc-500"
                     />
                   </div>
                 </div>
@@ -455,7 +455,7 @@ export const RecurringRulesModal: React.FC<RecurringRulesModalProps> = ({
                       id="ruleIsFixed"
                       checked={formData.isFixed}
                       onChange={(e) => setFormData({ ...formData, isFixed: e.target.checked })}
-                      className="rounded bg-black border-dark-border text-red-intense"
+                      className="rounded bg-[#09090B] border-[#27272A] accent-white cursor-pointer"
                     />
                     <label htmlFor="ruleIsFixed" className="text-xs text-zinc-300 cursor-pointer">
                       Bloqueo estricto (isFixed = true)
@@ -466,14 +466,14 @@ export const RecurringRulesModal: React.FC<RecurringRulesModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setIsEditing(false)}
-                      className="px-3 py-1.5 rounded-xl text-xs text-zinc-400 hover:text-white bg-dark-card border border-dark-border"
+                      className="px-3 py-1.5 rounded-xl text-xs text-zinc-400 hover:text-white bg-[#121215] border border-[#27272A] cursor-pointer"
                     >
                       Cancelar
                     </button>
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="px-4 py-1.5 bg-red-intense hover:bg-red-hover text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1.5"
+                      className="px-4 py-1.5 bg-white hover:bg-[#E4E4E7] text-zinc-950 rounded-xl text-xs font-semibold transition-all disabled:opacity-50 flex items-center gap-1.5 shadow-sm cursor-pointer"
                     >
                       {submitting ? (
                         <>
@@ -482,7 +482,7 @@ export const RecurringRulesModal: React.FC<RecurringRulesModalProps> = ({
                         </>
                       ) : (
                         <>
-                          <Check className="w-3.5 h-3.5" />
+                          <Check className="w-3.5 h-3.5 text-zinc-950" />
                           <span>Guardar Horario</span>
                         </>
                       )}
@@ -496,7 +496,7 @@ export const RecurringRulesModal: React.FC<RecurringRulesModalProps> = ({
           {/* Rules List */}
           {loading ? (
             <div className="py-12 flex flex-col items-center justify-center gap-3">
-              <RotateCw className="w-6 h-6 text-red-intense animate-spin" />
+              <RotateCw className="w-6 h-6 text-zinc-400 animate-spin" />
               <span className="text-xs text-zinc-500">Cargando reglas semanales...</span>
             </div>
           ) : filteredRules.length === 0 ? (
@@ -511,7 +511,7 @@ export const RecurringRulesModal: React.FC<RecurringRulesModalProps> = ({
                     key={rule.id}
                     className={`p-3.5 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                       rule.isActive
-                        ? 'bg-dark-cardSecondary/70 border-dark-borderSubtle hover:border-zinc-700'
+                        ? 'bg-[#18181B] border-[#27272A] hover:border-zinc-500'
                         : 'bg-zinc-950/40 border-zinc-900 opacity-60'
                     }`}
                   >
@@ -539,7 +539,7 @@ export const RecurringRulesModal: React.FC<RecurringRulesModalProps> = ({
                             {rule.category}
                           </span>
                           {rule.isFixed ? (
-                            <span className="flex items-center gap-1 text-[9px] text-red-400 font-mono">
+                            <span className="flex items-center gap-1 text-[9px] text-zinc-400 font-mono">
                               <Lock className="w-2.5 h-2.5" /> Fija
                             </span>
                           ) : (
@@ -563,7 +563,7 @@ export const RecurringRulesModal: React.FC<RecurringRulesModalProps> = ({
                       <button
                         onClick={() => handleToggleActive(rule)}
                         title={rule.isActive ? 'Desactivar regla' : 'Activar regla'}
-                        className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-xl border transition-all ${
+                        className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-xl border transition-all cursor-pointer ${
                           rule.isActive
                             ? 'bg-[#0A2613] text-emerald-300 border-[#165E30]'
                             : 'bg-zinc-900 text-zinc-500 border-zinc-800 hover:text-white'
@@ -575,7 +575,7 @@ export const RecurringRulesModal: React.FC<RecurringRulesModalProps> = ({
                       {/* Edit */}
                       <button
                         onClick={() => handleOpenEdit(rule)}
-                        className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+                        className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
                         title="Editar regla"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
@@ -584,7 +584,7 @@ export const RecurringRulesModal: React.FC<RecurringRulesModalProps> = ({
                       {/* Delete */}
                       <button
                         onClick={() => handleDelete(rule.id)}
-                        className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded-lg transition-colors"
+                        className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
                         title="Eliminar regla"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -598,13 +598,13 @@ export const RecurringRulesModal: React.FC<RecurringRulesModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 border-t border-dark-border bg-dark-card flex items-center justify-between">
-          <span className="text-[11px] text-zinc-500">
+        <div className="shrink-0 pt-4 border-t border-zinc-800 px-4 sm:px-6 pb-4 bg-[#121215] flex items-center justify-between">
+          <span className="text-[11px] text-zinc-500 font-mono">
             {rules.filter((r) => r.isActive).length} reglas activas configuradas
           </span>
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-dark-cardSecondary hover:bg-zinc-800 text-white rounded-xl text-xs font-semibold border border-dark-border transition-colors"
+            className="px-4 py-2 bg-[#18181B] hover:border-zinc-500 text-zinc-300 rounded-xl text-xs font-semibold border border-[#27272A] hover:text-white transition-colors cursor-pointer"
           >
             Cerrar
           </button>
