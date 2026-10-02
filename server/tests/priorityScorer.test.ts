@@ -80,4 +80,39 @@ describe('Planning Engine: PriorityScorer', () => {
     expect(resLow.lowMasteryScore).toBeGreaterThan(resHigh.lowMasteryScore);
     expect(resLow.totalScore).toBeGreaterThan(resHigh.totalScore);
   });
+
+  it('recalculates subject priority and nearestExamDays dynamically when an exam date is modified', () => {
+    const subject: SubjectInput = {
+      id: 'sub-1',
+      name: 'Paradigmas de Programación',
+      type: 'CURSADA',
+      masteryLevel: 'MEDIO',
+      priorityWeight: 1.5,
+      remainingStudyHours: 20,
+      pendingTasksCount: 2,
+      exams: [
+        {
+          id: 'exam-1',
+          subjectId: 'sub-1',
+          subjectName: 'Paradigmas de Programación',
+          title: '1.º Parcial Paradigmas',
+          type: 'PARCIAL_1',
+          date: new Date('2026-09-30T08:00:00Z'), // 28 days out from 2026-09-02
+          weight: 4.0,
+          targetHoursEstimate: 20,
+          completedHours: 0,
+        },
+      ],
+    };
+
+    const initial = PriorityScorer.calculateSubjectPriority(subject, referenceDate);
+    expect(initial.nearestExamDays).toBe(28);
+
+    // User moves exam date closer (5 days out)
+    subject.exams[0].date = new Date('2026-09-07T08:00:00Z');
+    const updated = PriorityScorer.calculateSubjectPriority(subject, referenceDate);
+    expect(updated.nearestExamDays).toBe(5);
+    expect(updated.priorityScore).toBeGreaterThan(initial.priorityScore);
+  });
 });
+

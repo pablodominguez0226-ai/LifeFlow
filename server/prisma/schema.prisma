@@ -9,8 +9,9 @@ generator client {
 
 model User {
   id                      String             @id @default(cuid())
+  email                   String             @unique
+  passwordHash            String             @default("")
   name                    String
-  email                   String?            @unique
   targetWakeTime          String             @default("06:30") // HH:mm
   maxBedTime              String             @default("00:00") // HH:mm
   targetSleepHours        Float              @default(7.5)
@@ -24,13 +25,17 @@ model User {
   updatedAt               DateTime           @updatedAt
 
   subjects                Subject[]
+  exams                   Exam[]
+  academicTasks           AcademicTask[]
   activities              Activity[]
   scheduleBlocks          ScheduleBlock[]
   weeklyPlans             WeeklyPlan[]
   dailyCheckIns           DailyCheckIn[]
   recommendations         Recommendation[]
   habits                  Habit[]
+  books                   Book[]
   recurringRules          RecurringScheduleRule[]
+  journalEntries          JournalEntry[]
 }
 
 model Subject {
@@ -44,18 +49,22 @@ model Subject {
   professor              String?
   priorityWeight         Float          @default(1.0)
   masteryLevel           String         @default("MEDIO") // "BAJO" | "MEDIO" | "ALTO"
+  priorityScore          Float          @default(0.0)
   progressManualOverride Float?
   createdAt              DateTime       @default(now())
   updatedAt              DateTime       @updatedAt
 
   exams                  Exam[]
   topics                 Topic[]
+  units                  AcademicUnit[]
   academicTasks          AcademicTask[]
   activities             Activity[]
 }
 
 model Exam {
   id                   String         @id @default(cuid())
+  userId               String         @default("cmtknkgox0000stcgnfs91uyt")
+  user                 User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   subjectId            String
   subject              Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   title                String
@@ -87,8 +96,31 @@ model Topic {
   academicTasks AcademicTask[]
 }
 
+model AcademicUnit {
+  id          String          @id @default(cuid())
+  subjectId   String
+  subject     Subject         @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  unitNumber  Int             // Ej: 1, 2, 3
+  title       String          // Ej: "Unidad 1: Programación Funcional"
+  topics      AcademicTopic[]
+  createdAt   DateTime        @default(now())
+}
+
+model AcademicTopic {
+  id             String        @id @default(cuid())
+  unitId         String
+  unit           AcademicUnit  @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  title          String        // Ej: "Inmutabilidad y Funciones Puras"
+  status         String        @default("PENDIENTE") // PENDIENTE, EN_PROGRESO, REVISION_PENDIENTE, DOMINADO
+  lastStudiedAt  DateTime?     // Para control de repaso al día siguiente
+  reviewCount    Int           @default(0)
+  createdAt      DateTime      @default(now())
+}
+
 model AcademicTask {
   id               String          @id @default(cuid())
+  userId           String          @default("cmtknkgox0000stcgnfs91uyt")
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   subjectId        String
   subject          Subject         @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   examId           String?
@@ -182,6 +214,12 @@ model DailyCheckIn {
   stressLevel    Int       @default(3) // 1 to 5
   studyHoursDone Float     @default(0.0)
   workoutDone    Boolean   @default(false)
+  workoutType    String?   // "Gimnasio", "Rugby/Fútbol", "Descanso activo", "No entrené"
+  tradingResult  String?   // "WIN", "LOSS", "BREAKEVEN_NO_OP"
+  tradingPipsRR  String?   // "Pips / R:R"
+  tradingNotes   String?   // "Bitácora operativa / Lección aprendida"
+  dayClosure     String?   // "Cierre del Día (Bitácora)"
+  tomorrowTasks  String?   // JSON array: [{ id: string, text: string, completed: boolean }]
   notes          String?
   createdAt      DateTime  @default(now())
 }
@@ -210,9 +248,36 @@ model Habit {
   targetFrequency Int       @default(7) // times
   frequencyUnit   String    @default("SEMANAL") // DIARIO, SEMANAL
   isActive        Boolean   @default(true)
-  streak          Int       @default(0)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  streak          Int         @default(0)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  logs            HabitLog[]
+}
+
+model HabitLog {
+  id          String   @id @default(cuid())
+  habitId     String
+  habit       Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  date        String   // "YYYY-MM-DD" e.g. "2026-09-08"
+  completed   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([habitId, date])
+}
+
+model Book {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  author      String
+  currentPage Int      @default(0)
+  totalPages  Int      @default(100)
+  status      String   @default("PENDING") // "CURRENT" | "PENDING" | "COMPLETED"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model RecurringScheduleRule {
@@ -234,4 +299,19 @@ model RecurringScheduleRule {
   isActive        Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+model JournalEntry {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date           DateTime  @default(now())
+  dayClosure     String?
+  tomorrowTasks  String?   // JSON string
+  tradingResult  String?
+  tradingPipsRR  String?
+  tradingNotes   String?
+  workoutType    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }

@@ -4,3 +4,16 @@ server/dist/
 server/.env
 *.log
 .DS_Store
+node_modules/
+server/node_modules/
+client/node_modules/
+client/dist/
+server/dist/
+server/.env
+*.db
+*.db-journal
+server/prisma/*.db
+server/prisma/*.db-journal
+.DS_Store
+*.log
+.vite/

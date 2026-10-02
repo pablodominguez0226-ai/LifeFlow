@@ -8,6 +8,7 @@ async function main() {
   // Clear existing data safely
   await prisma.recommendation.deleteMany();
   await prisma.dailyCheckIn.deleteMany();
+  await prisma.journalEntry.deleteMany();
   await prisma.scheduleBlock.deleteMany();
   await prisma.weeklyPlan.deleteMany();
   await prisma.academicTask.deleteMany();
@@ -273,21 +274,7 @@ async function main() {
     ],
   });
 
-  // 8. Create Initial Daily CheckIn for 02/09/2026
-  await prisma.dailyCheckIn.create({
-    data: {
-      userId: user.id,
-      date: new Date('2026-09-02T08:00:00Z'),
-      sleepHours: 7.5,
-      energyLevel: 4,
-      stressLevel: 2,
-      studyHoursDone: 2.0,
-      workoutDone: false,
-      notes: 'Miércoles sin cursada: foco en Diseño y Paradigmas.',
-    },
-  });
-
-  // 9. Initial Recommendations
+  // 8. Initial Recommendations
   await prisma.recommendation.createMany({
     data: [
       {
