@@ -351,7 +351,7 @@ export const QuickFocusModal: React.FC<QuickFocusModalProps> = ({
             <button
               type="button"
               onClick={() => setIsRunning(!isRunning)}
-              className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl bg-white text-zinc-950 hover:bg-[#E4E4E7] flex items-center justify-center transition-all shadow-xl active:scale-90 cursor-pointer"
+              className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl bg-[#D4FF00] hover:bg-[#C6F135] text-[#09090B] flex items-center justify-center transition-all shadow-xl active:scale-90 cursor-pointer border border-[#D4FF00]/40"
               title={isRunning ? 'Pausar' : 'Iniciar'}
             >
               {isRunning ? (
@@ -364,7 +364,7 @@ export const QuickFocusModal: React.FC<QuickFocusModalProps> = ({
             <button
               type="button"
               onClick={handleReset}
-              className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl bg-[#121215] border border-[#27272A] hover:border-zinc-500 text-zinc-400 hover:text-white flex items-center justify-center transition-all active:scale-90 cursor-pointer"
+              className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl bg-[#18181D] border border-[#2A2A33] hover:border-zinc-500 text-[#E4E4E7] hover:text-white flex items-center justify-center transition-all active:scale-90 cursor-pointer"
               title="Reiniciar temporizador"
             >
               <RotateCw className="w-6 h-6" />
@@ -379,9 +379,9 @@ export const QuickFocusModal: React.FC<QuickFocusModalProps> = ({
           type="button"
           onClick={handleRegisterCompleted}
           disabled={submitting}
-          className="w-full flex items-center justify-center gap-2.5 py-4 px-6 rounded-2xl text-sm sm:text-base font-bold bg-white hover:bg-[#E4E4E7] text-zinc-950 shadow-xl shadow-white/5 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
+          className="w-full flex items-center justify-center gap-2.5 py-4 px-6 rounded-2xl text-sm sm:text-base font-bold bg-[#D4FF00] hover:bg-[#C6F135] text-[#09090B] border border-[#D4FF00]/40 shadow-xl active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
         >
-          <CheckCircle2 className="w-5 h-5 text-zinc-950" />
+          <CheckCircle2 className="w-5 h-5 text-[#09090B]" />
           <span>{submitting ? 'Registrando progreso...' : 'Registrar sesión completada'}</span>
         </button>
 

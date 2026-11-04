@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { DashboardView } from './components/dashboard/DashboardView';
@@ -8,6 +8,8 @@ import { SportsView } from './components/sports/SportsView';
 import { HabitsView } from './components/habits/HabitsView';
 import { ReadingView } from './components/reading/ReadingView';
 import { StatsView } from './components/stats/StatsView';
+import { MobilePage } from './pages/mobile';
+import { AcademicoPage } from './pages/academico';
 
 import { WeeklyGeneratorModal } from './components/planning/WeeklyGeneratorModal';
 import { DailyPlanModal } from './components/planning/DailyPlanModal';
@@ -20,17 +22,80 @@ import {
   Heart,
   BookOpen,
   GraduationCap,
+  Smartphone,
 } from 'lucide-react';
 import { Logo } from './components/common/Logo';
 
 export function App() {
-  const [currentTab, setCurrentTab] = useState<string>('dashboard');
+  const [currentTab, setCurrentTab] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname;
+      if (path.startsWith('/mobile')) return 'mobile';
+      if (path.startsWith('/academico') || path.startsWith('/academic')) return 'academic';
+      if (path.startsWith('/calendario') || path.startsWith('/calendar')) return 'calendar';
+      if (path.startsWith('/habitos') || path.startsWith('/habits')) return 'habits';
+      if (path.startsWith('/lectura') || path.startsWith('/readings') || path.startsWith('/reading')) return 'readings';
+    }
+    return 'dashboard';
+  });
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      if (path.startsWith('/mobile')) {
+        setCurrentTab('mobile');
+      } else if (path.startsWith('/academico') || path.startsWith('/academic')) {
+        setCurrentTab('academic');
+      } else if (path.startsWith('/calendario') || path.startsWith('/calendar')) {
+        setCurrentTab('calendar');
+      } else if (path.startsWith('/habitos') || path.startsWith('/habits')) {
+        setCurrentTab('habits');
+      } else if (path.startsWith('/lectura') || path.startsWith('/readings') || path.startsWith('/reading')) {
+        setCurrentTab('readings');
+      } else {
+        setCurrentTab('dashboard');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const handleSelectTab = (tab: string) => {
+    setCurrentTab(tab);
+    if (typeof window !== 'undefined') {
+      if (tab === 'mobile') {
+        window.history.pushState({}, '', '/mobile');
+      } else if (tab === 'academic') {
+        window.history.pushState({}, '', '/academico');
+      } else if (tab === 'calendar') {
+        window.history.pushState({}, '', '/calendario');
+      } else if (tab === 'habits') {
+        window.history.pushState({}, '', '/habitos');
+      } else if (tab === 'readings') {
+        window.history.pushState({}, '', '/lectura');
+      } else if (
+        window.location.pathname === '/mobile' ||
+        window.location.pathname === '/academico' ||
+        window.location.pathname === '/academic' ||
+        window.location.pathname === '/calendario' ||
+        window.location.pathname === '/calendar' ||
+        window.location.pathname === '/habitos' ||
+        window.location.pathname === '/habits' ||
+        window.location.pathname === '/lectura' ||
+        window.location.pathname === '/readings' ||
+        window.location.pathname === '/reading'
+      ) {
+        window.history.pushState({}, '', '/');
+      }
+    }
+  };
 
   // Modal control states
   const [isWeeklyGenOpen, setIsWeeklyGenOpen] = useState(false);
   const [isDailyPlanOpen, setIsDailyPlanOpen] = useState(false);
   const [isNewActivityOpen, setIsNewActivityOpen] = useState(false);
   const [isRecurringRulesOpen, setIsRecurringRulesOpen] = useState(false);
+  const [isNewSubjectOpen, setIsNewSubjectOpen] = useState(false);
   const [replanTaskId, setReplanTaskId] = useState<string | null>(null);
 
   // Key to force re-render/refetch across views on mutation
@@ -51,6 +116,7 @@ export function App() {
             onNavigateToSports={() => setCurrentTab('sports')}
             onOpenReplan={(taskId) => setReplanTaskId(taskId)}
             onOpenDailyPlanner={() => setIsDailyPlanOpen(true)}
+            onOpenNewActivity={() => setIsNewActivityOpen(true)}
           />
         );
       case 'calendar':
@@ -59,10 +125,24 @@ export function App() {
             key={refreshKey}
             onOpenReplan={(taskId) => setReplanTaskId(taskId)}
             onOpenNewActivity={() => setIsNewActivityOpen(true)}
+            onOpenWeeklyGenerator={() => setIsWeeklyGenOpen(true)}
           />
         );
       case 'academic':
-        return <AcademicView key={refreshKey} />;
+        return (
+          <AcademicoPage
+            key="academic-page"
+            onSync={handleDataChange}
+            onOpenDailyPlanner={() => setIsDailyPlanOpen(true)}
+            onOpenWeeklyGenerator={() => setIsWeeklyGenOpen(true)}
+            onOpenRecurringRules={() => setIsRecurringRulesOpen(true)}
+            hideTopHeader={true}
+            externalNewSubjectModalOpen={isNewSubjectOpen}
+            onCloseExternalNewSubjectModal={() => setIsNewSubjectOpen(false)}
+          />
+        );
+      case 'mobile':
+        return <MobilePage key={refreshKey} />;
       case 'sports':
         return <SportsView key={refreshKey} />;
       case 'habits':
@@ -129,15 +209,32 @@ export function App() {
             onNavigateToSports={() => setCurrentTab('sports')}
             onOpenReplan={(taskId) => setReplanTaskId(taskId)}
             onOpenDailyPlanner={() => setIsDailyPlanOpen(true)}
+            onOpenNewActivity={() => setIsNewActivityOpen(true)}
           />
         );
     }
   };
 
+  if (currentTab === 'mobile') {
+    return (
+      <div className="min-h-screen bg-[#0f172a]">
+        <div className="fixed top-2 right-3 z-50">
+          <button
+            onClick={() => handleSelectTab('dashboard')}
+            className="px-2.5 py-1 rounded-full bg-slate-800/90 border border-slate-700 text-[10px] font-bold text-slate-300 hover:text-white transition-all shadow-lg backdrop-blur-md"
+          >
+            Escritorio &rarr;
+          </button>
+        </div>
+        <MobilePage key={refreshKey} />
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen bg-[#09090B] text-white selection:bg-white/20 selection:text-white">
       {/* Fixed Sidebar */}
-      <Sidebar currentTab={currentTab} onSelectTab={setCurrentTab} />
+      <Sidebar currentTab={currentTab} onSelectTab={handleSelectTab} />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 bg-[#09090B]">
@@ -148,6 +245,7 @@ export function App() {
           onOpenNewActivity={() => setIsNewActivityOpen(true)}
           onOpenRecurringRules={() => setIsRecurringRulesOpen(true)}
           onSync={handleDataChange}
+          onOpenNewSubject={currentTab === 'academic' ? () => setIsNewSubjectOpen(true) : undefined}
         />
 
         <main className="flex-1 overflow-y-auto pb-28 sm:pb-12 bg-[#09090B]">
@@ -157,11 +255,11 @@ export function App() {
 
       {/* Mobile Fixed Bottom Navigation (< md) */}
       <nav
-        aria-label="Navegación Móvil LifeFlow Lite"
+        aria-label="Navegación Móvil LifeFlow"
         className="fixed bottom-0 left-0 right-0 z-40 bg-[#09090B]/95 backdrop-blur-md border-t border-[#27272A] md:hidden px-3 py-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex items-center justify-around select-none shadow-[0_-4px_24px_rgba(0,0,0,0.6)]"
       >
         <button
-          onClick={() => setCurrentTab('dashboard')}
+          onClick={() => handleSelectTab('dashboard')}
           className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all min-w-[54px] min-h-[46px] active:scale-95 cursor-pointer ${
             currentTab === 'dashboard'
               ? 'text-white'
@@ -170,26 +268,26 @@ export function App() {
         >
           <LayoutDashboard className={`w-5 h-5 transition-transform ${currentTab === 'dashboard' ? 'stroke-[2.5] scale-105 text-white' : ''}`} />
           <span className={`text-[10px] mt-1 font-semibold tracking-tight ${currentTab === 'dashboard' ? 'text-white font-bold' : ''}`}>
-            Hoy
+            Mi Día
           </span>
         </button>
 
         <button
-          onClick={() => setCurrentTab('calendar')}
+          onClick={() => handleSelectTab('mobile')}
           className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all min-w-[54px] min-h-[46px] active:scale-95 cursor-pointer ${
-            currentTab === 'calendar'
-              ? 'text-white'
+            currentTab === 'mobile'
+              ? 'text-[#e50914]'
               : 'text-zinc-500 hover:text-zinc-300'
           }`}
         >
-          <Calendar className={`w-5 h-5 transition-transform ${currentTab === 'calendar' ? 'stroke-[2.5] scale-105 text-white' : ''}`} />
-          <span className={`text-[10px] mt-1 font-semibold tracking-tight ${currentTab === 'calendar' ? 'text-white font-bold' : ''}`}>
-            Calendario
+          <Smartphone className={`w-5 h-5 transition-transform ${currentTab === 'mobile' ? 'stroke-[2.5] scale-105 text-[#e50914]' : ''}`} />
+          <span className={`text-[10px] mt-1 font-semibold tracking-tight ${currentTab === 'mobile' ? 'text-[#e50914] font-bold' : ''}`}>
+            Rápido
           </span>
         </button>
 
         <button
-          onClick={() => setCurrentTab('academic')}
+          onClick={() => handleSelectTab('academic')}
           className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all min-w-[54px] min-h-[46px] active:scale-95 cursor-pointer ${
             currentTab === 'academic'
               ? 'text-white'
@@ -227,6 +325,20 @@ export function App() {
           <BookOpen className={`w-5 h-5 transition-transform ${currentTab === 'readings' ? 'stroke-[2.5] scale-105 text-white' : ''}`} />
           <span className={`text-[10px] mt-1 font-semibold tracking-tight ${currentTab === 'readings' ? 'text-white font-bold' : ''}`}>
             Lectura
+          </span>
+        </button>
+
+        <button
+          onClick={() => setCurrentTab('calendar')}
+          className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all min-w-[54px] min-h-[46px] active:scale-95 cursor-pointer ${
+            currentTab === 'calendar'
+              ? 'text-white'
+              : 'text-zinc-500 hover:text-zinc-300'
+          }`}
+        >
+          <Calendar className={`w-5 h-5 transition-transform ${currentTab === 'calendar' ? 'stroke-[2.5] scale-105 text-white' : ''}`} />
+          <span className={`text-[10px] mt-1 font-semibold tracking-tight ${currentTab === 'calendar' ? 'text-white font-bold' : ''}`}>
+            Calendario
           </span>
         </button>
       </nav>

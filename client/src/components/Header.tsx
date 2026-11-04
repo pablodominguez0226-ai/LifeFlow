@@ -9,6 +9,7 @@ interface HeaderProps {
   onOpenNewActivity: () => void;
   onOpenRecurringRules?: () => void;
   onSync?: () => void;
+  onOpenNewSubject?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -18,25 +19,26 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenNewActivity,
   onOpenRecurringRules,
   onSync,
+  onOpenNewSubject,
 }) => {
   const getTabTitle = () => {
     switch (currentTab) {
       case 'dashboard':
-        return 'Dashboard';
-      case 'calendar':
-        return 'Calendario Semanal';
+        return 'Mi Día';
       case 'academic':
-        return 'Plan Académico & Materias';
+        return 'Académico';
+      case 'habits':
+        return 'Hábitos';
+      case 'readings':
+        return 'Lectura';
+      case 'calendar':
+        return 'Calendario';
       case 'sports':
         return 'Entrenamiento & Rendimiento';
-      case 'habits':
-        return 'Hábitos & Recuperación';
-      case 'readings':
-        return 'Lecturas Personales';
       case 'stats':
-        return 'Estadísticas & Cumplimiento';
+        return 'Estadísticas';
       case 'settings':
-        return 'Configuración del Sistema';
+        return 'Configuración';
       default:
         return 'LifeFlow';
     }
@@ -98,13 +100,23 @@ export const Header: React.FC<HeaderProps> = ({
           <span>Generar semana</span>
         </button>
 
-        <button
-          onClick={onOpenNewActivity}
-          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-[#18181B] text-[#A1A1AA] border border-[#27272A] hover:border-zinc-500 hover:text-white transition-colors cursor-pointer"
-        >
-          <Plus className="w-3.5 h-3.5 text-zinc-400" />
-          <span>Actividad</span>
-        </button>
+        {onOpenNewSubject ? (
+          <button
+            onClick={onOpenNewSubject}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[#E50914] hover:bg-[#b80710] text-white border border-[#E50914] shadow-sm transition-all cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>+ Nueva Materia / Final</span>
+          </button>
+        ) : (
+          <button
+            onClick={onOpenNewActivity}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-[#18181B] text-[#A1A1AA] border border-[#27272A] hover:border-zinc-500 hover:text-white transition-colors cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5 text-zinc-400" />
+            <span>Actividad</span>
+          </button>
+        )}
       </div>
 
       {/* Mobile Clean Actions (< md) */}

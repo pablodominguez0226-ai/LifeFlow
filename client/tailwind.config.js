@@ -8,6 +8,11 @@ export default {
   theme: {
     extend: {
       colors: {
+        lime: {
+          DEFAULT: '#D4FF00',
+          hover: '#C6F135',
+          dark: '#09090B',
+        },
         chalk: {
           DEFAULT: 'var(--chalk-primary)',
           hover: 'var(--chalk-hover)',

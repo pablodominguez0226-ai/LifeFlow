@@ -3,14 +3,11 @@ import {
   LayoutDashboard,
   Calendar,
   GraduationCap,
-  Dumbbell,
   Heart,
   BookOpen,
-  BarChart3,
-  Settings,
-  Activity,
   LogOut,
   ChevronDown,
+  Smartphone,
 } from 'lucide-react';
 import { Logo } from './common/Logo';
 
@@ -21,14 +18,12 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab }) => {
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'calendar', label: 'Calendario', icon: Calendar },
+    { id: 'dashboard', label: 'Mi Día', icon: LayoutDashboard },
+    { id: 'mobile', label: 'Vista Móvil', icon: Smartphone },
     { id: 'academic', label: 'Académico', icon: GraduationCap },
-    { id: 'sports', label: 'Recuperación & Bitácora', icon: Dumbbell },
     { id: 'habits', label: 'Hábitos', icon: Heart },
-    { id: 'readings', label: 'Lecturas', icon: BookOpen },
-    { id: 'stats', label: 'Estadísticas', icon: BarChart3 },
-    { id: 'settings', label: 'Configuración', icon: Settings },
+    { id: 'readings', label: 'Lectura', icon: BookOpen },
+    { id: 'calendar', label: 'Calendario', icon: Calendar },
   ];
 
   return (

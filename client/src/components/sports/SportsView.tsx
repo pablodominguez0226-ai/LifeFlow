@@ -9,8 +9,11 @@ import {
   TrendingUp,
   Plus,
   Trash2,
-  ChevronDown,
-  ChevronUp,
+  Sparkles,
+  Target,
+  Brain,
+  Clock,
+  Check,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -21,30 +24,34 @@ interface TaskItem {
   completed: boolean;
 }
 
+interface ExtractedStats {
+  studyHours: number;
+  sleepHours: number;
+  energyLevel: number;
+  stressLevel: number;
+  workoutDone: boolean;
+  workoutType: string;
+  tradingResult: string | null;
+  tradingPipsRR: string | null;
+  tradingNotes: string | null;
+  summaryText: string;
+  aiGenerated?: boolean;
+}
+
 export const SportsView: React.FC = () => {
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Daily Checkin form state
-  const [sleepHours, setSleepHours] = useState(7.5);
-  const [energyLevel, setEnergyLevel] = useState(4);
-  const [stressLevel, setStressLevel] = useState(2);
-  const [studyHoursDone, setStudyHoursDone] = useState(3.0);
-  const [workoutType, setWorkoutType] = useState<string>('Gimnasio');
+  // Freeform Journal state
+  const [journalText, setJournalText] = useState<string>('');
+  const [isProcessingAI, setIsProcessingAI] = useState(false);
+  const [extractedSummary, setExtractedSummary] = useState<ExtractedStats | null>(null);
 
-  // Trading state (collapsible module)
-  const [isTradingOpen, setIsTradingOpen] = useState(false);
-  const [tradingResult, setTradingResult] = useState<string>('');
-  const [tradingPipsRR, setTradingPipsRR] = useState<string>('');
-  const [tradingNotes, setTradingNotes] = useState<string>('');
-
-  // Structured Night Journal & Plan state
-  const [dayClosure, setDayClosure] = useState<string>('');
+  // Tomorrow tasks checklist
   const [tomorrowTasks, setTomorrowTasks] = useState<TaskItem[]>([]);
   const [newTomorrowTaskText, setNewTomorrowTaskText] = useState<string>('');
 
-  const [submitting, setSubmitting] = useState(false);
-  const [submittedMessage, setSubmittedMessage] = useState<string | null>(null);
+  const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
 
   const loadHistory = async () => {
     try {
@@ -52,42 +59,17 @@ export const SportsView: React.FC = () => {
       const res = await api.getCheckinHistory();
       setHistory(res);
 
-      // Check if today's checkin already exists to prefill form
+      // Check if today's checkin already exists to prefill
       const todayStr = format(new Date(), 'yyyy-MM-dd');
       const todayEntry = (res || []).find(
         (item: any) => format(new Date(item.date), 'yyyy-MM-dd') === todayStr
       );
 
       if (todayEntry) {
-        if (todayEntry.sleepHours !== undefined) setSleepHours(todayEntry.sleepHours);
-        if (todayEntry.energyLevel !== undefined) setEnergyLevel(todayEntry.energyLevel);
-        if (todayEntry.stressLevel !== undefined) setStressLevel(todayEntry.stressLevel);
-        if (todayEntry.studyHoursDone !== undefined) setStudyHoursDone(todayEntry.studyHoursDone);
-        if (todayEntry.workoutType) {
-          setWorkoutType(todayEntry.workoutType);
-        } else if (todayEntry.workoutDone === false) {
-          setWorkoutType('No entrené');
-        } else {
-          setWorkoutType('Gimnasio');
-        }
-
-        if (todayEntry.tradingResult) {
-          setTradingResult(todayEntry.tradingResult);
-          setIsTradingOpen(true);
-        }
-        if (todayEntry.tradingPipsRR) {
-          setTradingPipsRR(todayEntry.tradingPipsRR);
-          setIsTradingOpen(true);
-        }
-        if (todayEntry.tradingNotes) {
-          setTradingNotes(todayEntry.tradingNotes);
-          setIsTradingOpen(true);
-        }
-
         if (todayEntry.dayClosure) {
-          setDayClosure(todayEntry.dayClosure);
+          setJournalText(todayEntry.dayClosure);
         } else if (todayEntry.notes) {
-          setDayClosure(todayEntry.notes);
+          setJournalText(todayEntry.notes);
         }
 
         if (todayEntry.tomorrowTasks) {
@@ -97,6 +79,28 @@ export const SportsView: React.FC = () => {
           } catch (e) {
             console.error('Error parsing tomorrow tasks:', e);
           }
+        }
+
+        // Populate summary if available
+        if (
+          todayEntry.studyHoursDone !== undefined ||
+          todayEntry.sleepHours !== undefined ||
+          todayEntry.tradingResult ||
+          todayEntry.dayClosure
+        ) {
+          setExtractedSummary({
+            studyHours: todayEntry.studyHoursDone ?? 0,
+            sleepHours: todayEntry.sleepHours ?? 7.5,
+            energyLevel: todayEntry.energyLevel ?? 4,
+            stressLevel: todayEntry.stressLevel ?? 2,
+            workoutDone: Boolean(todayEntry.workoutDone),
+            workoutType: todayEntry.workoutType || (todayEntry.workoutDone ? 'Gimnasio' : 'No entrené'),
+            tradingResult: todayEntry.tradingResult || null,
+            tradingPipsRR: todayEntry.tradingPipsRR || null,
+            tradingNotes: todayEntry.tradingNotes || null,
+            summaryText: todayEntry.notes || todayEntry.dayClosure || 'Registro del día guardado.',
+            aiGenerated: true,
+          });
         }
       }
     } catch (err) {
@@ -110,6 +114,41 @@ export const SportsView: React.FC = () => {
     loadHistory();
   }, []);
 
+  const handleProcessFreeformJournal = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const trimmed = journalText.trim();
+    if (!trimmed) return;
+
+    try {
+      setIsProcessingAI(true);
+      setNoticeMessage(null);
+
+      const res = await api.processFreeformJournal(trimmed, new Date().toISOString());
+
+      if (res?.summary) {
+        setExtractedSummary(res.summary);
+      }
+      if (res?.tomorrowTasks && Array.isArray(res.tomorrowTasks)) {
+        setTomorrowTasks(res.tomorrowTasks);
+      }
+
+      setNoticeMessage(
+        res?.aiGenerated
+          ? 'Bitácora analizada y guardada con Gemini. Estadísticas y plan para mañana sincronizados.'
+          : 'Bitácora guardada con éxito. Plan para mañana sincronizado con el Dashboard.'
+      );
+
+      await loadHistory();
+      setTimeout(() => setNoticeMessage(null), 5000);
+    } catch (err: any) {
+      console.error('Error procesando bitácora libre:', err);
+      setNoticeMessage('Error al procesar la bitácora con IA. Inténtalo de nuevo.');
+      setTimeout(() => setNoticeMessage(null), 4000);
+    } finally {
+      setIsProcessingAI(false);
+    }
+  };
+
   const handleAddTomorrowTask = () => {
     const trimmed = newTomorrowTaskText.trim();
     if (!trimmed) return;
@@ -120,67 +159,45 @@ export const SportsView: React.FC = () => {
     };
     setTomorrowTasks((prev) => [...prev, newTask]);
     setNewTomorrowTaskText('');
+
+    // Also persist through priority task API
+    api.addPriorityTask(trimmed).catch((err) => console.error(err));
   };
 
   const handleRemoveTomorrowTask = (taskId: string) => {
     setTomorrowTasks((prev) => prev.filter((t) => t.id !== taskId));
   };
 
-  const handleCheckinSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleToggleTomorrowTask = async (taskId: string) => {
+    const task = tomorrowTasks.find((t) => t.id === taskId);
+    if (!task) return;
+    const nextCompleted = !task.completed;
+    setTomorrowTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, completed: nextCompleted } : t))
+    );
     try {
-      setSubmitting(true);
-      const isWorkoutDone = workoutType !== 'No entrené';
-      await api.createCheckin({
-        date: new Date().toISOString(),
-        sleepHours: Number(sleepHours),
-        energyLevel: Number(energyLevel),
-        stressLevel: Number(stressLevel),
-        studyHoursDone: Number(studyHoursDone),
-        workoutDone: isWorkoutDone,
-        workoutType,
-        tradingResult: tradingResult || undefined,
-        tradingPipsRR: tradingPipsRR || undefined,
-        tradingNotes: tradingNotes || undefined,
-        dayClosure: dayClosure || undefined,
-        tomorrowTasks: tomorrowTasks.length > 0 ? tomorrowTasks : undefined,
-        notes: dayClosure || undefined,
-      });
-      setSubmittedMessage(
-        'Check-in y Bitácora registrados con éxito. Tu plan para mañana se sincronizó con el Dashboard.'
-      );
-      loadHistory();
-      setTimeout(() => setSubmittedMessage(null), 4000);
+      await api.togglePriorityTask(taskId, nextCompleted);
     } catch (err) {
-      console.error(err);
-    } finally {
-      setSubmitting(false);
+      console.error('Error toggling tomorrow task:', err);
     }
   };
 
-  // Dynamic system date calculation formatted in Spanish
+  // Dynamic system date formatted in Spanish
   const today = new Date();
   const rawDayName = format(today, 'EEEE', { locale: es });
   const capitalizedDay = rawDayName.charAt(0).toUpperCase() + rawDayName.slice(1);
   const formattedToday = `${capitalizedDay}, ${format(today, "d 'de' MMMM 'de' yyyy", { locale: es })}`;
   const badgeDate = format(today, "d MMM yyyy", { locale: es });
 
-  const workoutOptions = [
-    { value: 'Gimnasio', label: 'Gimnasio', icon: Dumbbell, desc: 'Fuerza / Hipertrofia' },
-    { value: 'Rugby/Fútbol', label: 'Rugby/Fútbol', icon: Trophy, desc: 'Deporte de equipo' },
-    { value: 'Descanso activo', label: 'Descanso activo', icon: Activity, desc: 'Movilidad / Caminata' },
-    { value: 'No entrené', label: 'No entrené', icon: Moon, desc: 'Descanso total' },
-  ];
-
   return (
-    <div className="max-w-[1600px] mx-auto p-4 sm:p-6 space-y-6 bg-black text-white">
+    <div className="max-w-[1600px] mx-auto p-4 sm:p-6 space-y-6 bg-[#09090B] text-white min-h-screen pb-24">
       {/* Title */}
       <div>
         <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
           Recuperación, Bitácora Diaria & Trading
         </h2>
         <p className="text-xs text-zinc-400 mt-1">
-          Rendimiento físico, balance psicológico y planificación nocturna estratégica
+          Rendimiento físico, balance psicológico y extracción inteligente de hábitos y tareas
         </p>
       </div>
 
@@ -273,18 +290,18 @@ export const SportsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Daily Check-in Form + History Preview */}
+      {/* Bitácora de Texto Libre + Historial Reciente */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Main Checkin Form (7 cols) */}
+        {/* Main Freeform Journal Section (7 cols) */}
         <div className="lg:col-span-7 bg-[#121215] border border-[#27272A] rounded-2xl p-5 sm:p-6 space-y-5 shadow-sm">
           {/* Header with Dynamic Date */}
           <div className="flex items-center justify-between pb-3 border-b border-[#27272A]">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-[#18181B] border border-zinc-800 flex items-center justify-center text-zinc-300">
-                <Activity className="w-4 h-4 text-zinc-300" />
+                <Brain className="w-4 h-4 text-white" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-white">Registro de Recuperación Diaria</h3>
+                <h3 className="text-base font-bold text-white">Cierre del Día & Bitácora</h3>
                 <p className="text-[11px] text-zinc-400 capitalize">{formattedToday}</p>
               </div>
             </div>
@@ -293,407 +310,229 @@ export const SportsView: React.FC = () => {
             </span>
           </div>
 
-          {submittedMessage && (
-            <div className="p-3.5 bg-[#0A2613] border border-[#165E30] text-emerald-300 text-xs rounded-xl flex items-center gap-2">
+          {noticeMessage && (
+            <div className="p-3.5 bg-[#0A2613] border border-[#165E30] text-emerald-300 text-xs rounded-xl flex items-center gap-2 animate-in fade-in duration-200">
               <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
-              <span>{submittedMessage}</span>
+              <span>{noticeMessage}</span>
             </div>
           )}
 
-          <form onSubmit={handleCheckinSubmit} className="space-y-5">
-            {/* Metric Sliders / Inputs */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-[#18181B] p-3.5 rounded-xl border border-[#27272A] space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs text-zinc-300 font-medium">
-                    Horas dormidas anoche
-                  </label>
-                  <span className="text-xs font-mono font-bold text-white">{sleepHours}h</span>
-                </div>
-                <input
-                  type="range"
-                  min="4.0"
-                  max="10.0"
-                  step="0.5"
-                  value={sleepHours}
-                  onChange={(e) => setSleepHours(Number(e.target.value))}
-                  className="w-full accent-white cursor-pointer"
-                />
-                <div className="flex justify-between text-[10px] text-zinc-500 font-mono">
-                  <span>5h (Déficit)</span>
-                  <span>7.5h (Objetivo)</span>
-                  <span>9h (Óptimo)</span>
-                </div>
-              </div>
-
-              <div className="bg-[#18181B] p-3.5 rounded-xl border border-[#27272A] space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs text-zinc-300 font-medium">
-                    Horas estudiadas hoy
-                  </label>
-                  <span className="text-xs font-mono font-bold text-white">{studyHoursDone}h</span>
-                </div>
-                <input
-                  type="number"
-                  step="0.5"
-                  min="0"
-                  max="14"
-                  value={studyHoursDone}
-                  onChange={(e) => setStudyHoursDone(Number(e.target.value))}
-                  className="w-full bg-[#121215] border border-[#27272A] rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-zinc-500"
-                />
-                <span className="text-[10px] text-zinc-500 block">
-                  Suma total de sesiones o bloques académicos completados
-                </span>
-              </div>
+          {/* Área de Texto Libre Titulada */}
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm font-bold text-white block">
+                Bitácora del Día (¿Qué hiciste hoy y qué tenés en mente?)
+              </label>
+              <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                Escribe en prosa libre: cuánto dormiste, qué materias y temas estudiaste, tus horas de foco, cómo te sentiste, si fuiste al gym o entrenaste, tu sesión de trading y qué tareas necesitas encarar mañana.
+              </p>
             </div>
 
-            {/* Energy & Stress Selectors */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs text-zinc-300 block mb-1.5 font-medium">
-                  Nivel de Energía (1-5)
-                </label>
-                <select
-                  value={energyLevel}
-                  onChange={(e) => setEnergyLevel(Number(e.target.value))}
-                  className="w-full bg-[#18181B] border border-[#27272A] rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-zinc-500"
-                >
-                  <option value={1}>1 — Muy baja (Agotamiento)</option>
-                  <option value={2}>2 — Baja</option>
-                  <option value={3}>3 — Moderada</option>
-                  <option value={4}>4 — Alta (Excelente foco)</option>
-                  <option value={5}>5 — Máxima (Peak cognitivo)</option>
-                </select>
-              </div>
+            <textarea
+              rows={8}
+              value={journalText}
+              onChange={(e) => setJournalText(e.target.value)}
+              placeholder="Ej: Hoy dormí 7.5h y me levanté con buena energía. Le metí 3.5h a Paradigmas Unidad 2 completando la guía de ejercicios de funciones puras. Fui al gimnasio a las 17:00 a hacer sesión de empuje. En trading operé la sesión de NY con +28 pips (1:2 R:R) respetando el stop. Para mañana necesito: 1) Repasar Unidad 2 de Paradigmas, 2) Avanzar Unidad 1 de Diseño de Sistemas, 3) Hacer compras de la semana y 4) 20 min de lectura nocturna."
+              className="w-full bg-[#18181B] border border-[#27272A] rounded-2xl p-4 text-xs sm:text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-white transition-all leading-relaxed resize-y min-h-[180px]"
+            />
 
-              <div>
-                <label className="text-xs text-zinc-300 block mb-1.5 font-medium">
-                  Nivel de Estrés (1-5)
-                </label>
-                <select
-                  value={stressLevel}
-                  onChange={(e) => setStressLevel(Number(e.target.value))}
-                  className="w-full bg-[#18181B] border border-[#27272A] rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-zinc-500"
-                >
-                  <option value={1}>1 — Muy bajo (Calma total)</option>
-                  <option value={2}>2 — Bajo / Controlado</option>
-                  <option value={3}>3 — Moderado</option>
-                  <option value={4}>4 — Alto</option>
-                  <option value={5}>5 — Sobrecarga / Alerta</option>
-                </select>
-              </div>
-            </div>
+            <button
+              type="button"
+              onClick={() => handleProcessFreeformJournal()}
+              disabled={isProcessingAI || !journalText.trim()}
+              className="w-full py-3.5 px-6 rounded-xl bg-white hover:bg-[#E4E4E7] text-zinc-950 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50 active:scale-[0.99]"
+            >
+              {isProcessingAI ? (
+                <>
+                  <Sparkles className="w-4 h-4 text-zinc-950 animate-spin" />
+                  <span>Analizando y extrayendo con Gemini...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 text-zinc-950" />
+                  <span>Guardar y Procesar con IA</span>
+                </>
+              )}
+            </button>
+          </div>
 
-            {/* 2. Rediseño del Registro de Entrenamiento y Estado: Segmented Toggle */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs text-zinc-300 font-semibold block">
-                  Entrenamiento y Estado Físico
-                </label>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400">
-                  {workoutType}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {workoutOptions.map((opt) => {
-                  const isSelected = workoutType === opt.value;
-                  const Icon = opt.icon;
-                  return (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => setWorkoutType(opt.value)}
-                      className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all cursor-pointer text-center select-none ${
-                        isSelected
-                          ? 'bg-white text-zinc-950 border-white shadow-[0_0_12px_rgba(255,255,255,0.25)] ring-1 ring-white'
-                          : 'bg-[#18181B] text-zinc-400 border-[#27272A] hover:border-zinc-600 hover:text-zinc-200'
-                      }`}
-                    >
-                      <Icon className={`w-4 h-4 mb-1 ${isSelected ? 'text-zinc-950' : 'text-zinc-400'}`} />
-                      <span className="text-xs font-bold leading-tight">{opt.label}</span>
-                      <span
-                        className={`text-[9px] mt-0.5 truncate max-w-full ${
-                          isSelected ? 'text-zinc-700 font-medium' : 'text-zinc-500'
-                        }`}
-                      >
-                        {opt.desc}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* 3. Módulo de Trading / Operativa Diaria: Collapsible Section */}
-            <div className="bg-[#18181B] border border-[#27272A] rounded-xl overflow-hidden transition-all">
-              <button
-                type="button"
-                onClick={() => setIsTradingOpen(!isTradingOpen)}
-                className="w-full p-3.5 flex items-center justify-between text-left hover:bg-zinc-800/40 transition-colors cursor-pointer"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-300">
-                    <TrendingUp className="w-4 h-4 text-emerald-400" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-white">Operativa de Trading del Día</h4>
-                    <p className="text-[11px] text-zinc-400">
-                      {tradingResult
-                        ? `${tradingResult} ${tradingPipsRR ? `• ${tradingPipsRR}` : ''}`
-                        : 'Registro de resultados, pips / R:R y disciplina operativa (opcional)'}
-                    </p>
-                  </div>
-                </div>
+          {/* Estadísticas Resumidas Extraídas */}
+          {extractedSummary && (
+            <div className="p-4 sm:p-5 rounded-2xl bg-[#141417] border border-[#27272A] space-y-4 animate-in fade-in duration-300">
+              <div className="flex items-center justify-between pb-2 border-b border-[#27272A]">
                 <div className="flex items-center gap-2">
-                  {tradingResult && (
-                    <span
-                      className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${
-                        tradingResult === 'Positiva / Win'
-                          ? 'bg-emerald-950/60 border-emerald-500/60 text-emerald-300'
-                          : tradingResult === 'Negativa / Loss'
-                          ? 'bg-rose-950/60 border-rose-500/60 text-rose-300'
-                          : 'bg-zinc-900 border-zinc-700 text-zinc-300'
+                  <Sparkles className="w-4 h-4 text-white" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-white">
+                    Extracción Inteligente por IA
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#18181B] text-zinc-300 border border-[#27272A]">
+                  {extractedSummary.aiGenerated ? 'Gemini 2.5 Flash' : 'Motor LifeFlow'}
+                </span>
+              </div>
+
+              {/* Grid de Métricas Resumidas */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                <div className="p-3 bg-[#18181B] rounded-xl border border-[#27272A]">
+                  <span className="text-[10px] text-zinc-500 font-mono block">Horas de Estudio</span>
+                  <span className="text-sm font-black text-white font-mono mt-0.5 block">
+                    {extractedSummary.studyHours}h
+                  </span>
+                </div>
+
+                <div className="p-3 bg-[#18181B] rounded-xl border border-[#27272A]">
+                  <span className="text-[10px] text-zinc-500 font-mono block">Descanso Anoche</span>
+                  <span className="text-sm font-black text-white font-mono mt-0.5 block">
+                    {extractedSummary.sleepHours}h
+                  </span>
+                </div>
+
+                <div className="p-3 bg-[#18181B] rounded-xl border border-[#27272A]">
+                  <span className="text-[10px] text-zinc-500 font-mono block">Foco / Energía</span>
+                  <span className="text-sm font-black text-white font-mono mt-0.5 block">
+                    {extractedSummary.energyLevel} / 5
+                  </span>
+                </div>
+
+                <div className="p-3 bg-[#18181B] rounded-xl border border-[#27272A]">
+                  <span className="text-[10px] text-zinc-500 font-mono block">Nivel de Estrés</span>
+                  <span className="text-sm font-black text-white font-mono mt-0.5 block">
+                    {extractedSummary.stressLevel} / 5
+                  </span>
+                </div>
+
+                <div className="p-3 bg-[#18181B] rounded-xl border border-[#27272A]">
+                  <span className="text-[10px] text-zinc-500 font-mono block">Entrenamiento</span>
+                  <span className="text-xs font-bold text-white truncate mt-0.5 block">
+                    {extractedSummary.workoutType || (extractedSummary.workoutDone ? 'Completado' : 'Descanso')}
+                  </span>
+                </div>
+
+                <div className="p-3 bg-[#18181B] rounded-xl border border-[#27272A]">
+                  <span className="text-[10px] text-zinc-500 font-mono block">Operativa Trading</span>
+                  <span className="text-xs font-bold text-white truncate mt-0.5 block">
+                    {extractedSummary.tradingResult || 'Sin sesión'}
+                  </span>
+                </div>
+              </div>
+
+              {extractedSummary.tradingPipsRR && (
+                <div className="text-[11px] text-zinc-300 font-mono px-3 py-1.5 rounded-lg bg-[#18181B] border border-[#27272A]">
+                  <strong>Resultado Trading:</strong> {extractedSummary.tradingPipsRR}
+                </div>
+              )}
+
+              {extractedSummary.summaryText && (
+                <p className="text-xs text-zinc-300 italic bg-[#18181B] p-3 rounded-xl border border-[#27272A]/70 leading-relaxed">
+                  "{extractedSummary.summaryText}"
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Checklist de Tareas Prioritarias para Mañana (máx 4 ítems) */}
+          <div className="space-y-3 pt-3 border-t border-[#27272A]">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Target className="w-4 h-4 text-white" />
+                <h4 className="text-xs sm:text-sm font-bold text-white">
+                  Checklist de Tareas para Mañana
+                </h4>
+              </div>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#18181B] border border-[#27272A] text-zinc-400">
+                {tomorrowTasks.length} / 4 prioridad
+              </span>
+            </div>
+            <p className="text-[11px] text-zinc-400">
+              Tareas extraídas automáticamente por la IA. Se sincronizan en tu Dashboard para el día siguiente.
+            </p>
+
+            <div className="space-y-2">
+              {tomorrowTasks.map((t, idx) => (
+                <div
+                  key={t.id}
+                  className={`flex items-center justify-between gap-2.5 p-3 rounded-xl border transition-all ${
+                    t.completed
+                      ? 'bg-[#18181B]/60 border-[#27272A] opacity-75'
+                      : 'bg-[#18181B] border-[#27272A] hover:border-zinc-600'
+                  }`}
+                >
+                  <div
+                    onClick={() => handleToggleTomorrowTask(t.id)}
+                    className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer select-none"
+                  >
+                    <div
+                      className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-colors ${
+                        t.completed
+                          ? 'bg-white border-white text-zinc-950'
+                          : 'bg-zinc-900 border-zinc-700 text-transparent'
                       }`}
                     >
-                      {tradingResult.split(' / ')[0]}
-                    </span>
-                  )}
-                  {isTradingOpen ? (
-                    <ChevronUp className="w-4 h-4 text-zinc-400" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 text-zinc-400" />
-                  )}
-                </div>
-              </button>
-
-              {isTradingOpen && (
-                <div className="p-4 pt-2 border-t border-[#27272A] space-y-4 bg-[#141417]">
-                  {/* Selector de resultado */}
-                  <div>
-                    <label className="text-[11px] text-zinc-400 block mb-1.5 font-medium">
-                      Resultado de la Sesión
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setTradingResult(tradingResult === 'Positiva / Win' ? '' : 'Positiva / Win')
-                        }
-                        className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer ${
-                          tradingResult === 'Positiva / Win'
-                            ? 'bg-emerald-950/80 border-emerald-500 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.2)]'
-                            : 'bg-[#18181B] border-[#27272A] text-zinc-400 hover:text-emerald-400 hover:border-emerald-800'
-                        }`}
-                      >
-                        Positiva / Win
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setTradingResult(tradingResult === 'Negativa / Loss' ? '' : 'Negativa / Loss')
-                        }
-                        className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer ${
-                          tradingResult === 'Negativa / Loss'
-                            ? 'bg-rose-950/80 border-rose-500 text-rose-300 shadow-[0_0_10px_rgba(244,63,94,0.2)]'
-                            : 'bg-[#18181B] border-[#27272A] text-zinc-400 hover:text-rose-400 hover:border-rose-800'
-                        }`}
-                      >
-                        Negativa / Loss
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setTradingResult(
-                            tradingResult === 'Breakeven / No operé' ? '' : 'Breakeven / No operé'
-                          )
-                        }
-                        className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer ${
-                          tradingResult === 'Breakeven / No operé'
-                            ? 'bg-zinc-800 border-zinc-500 text-white shadow-sm'
-                            : 'bg-[#18181B] border-[#27272A] text-zinc-400 hover:text-zinc-200 hover:border-zinc-600'
-                        }`}
-                      >
-                        Breakeven / No operé
-                      </button>
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
                     </div>
+                    <span className="w-5 h-5 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-[10px] font-mono font-bold text-zinc-400 shrink-0">
+                      {idx + 1}
+                    </span>
+                    <span
+                      className={`text-xs font-medium truncate ${
+                        t.completed ? 'line-through text-zinc-500' : 'text-zinc-200'
+                      }`}
+                    >
+                      {t.text}
+                    </span>
                   </div>
 
-                  {/* Pips / R:R */}
-                  <div>
-                    <label className="text-[11px] text-zinc-400 block mb-1 font-medium">
-                      Pips / R:R
-                    </label>
-                    <input
-                      type="text"
-                      value={tradingPipsRR}
-                      onChange={(e) => setTradingPipsRR(e.target.value)}
-                      placeholder="Ej: +35 pips / 1:2.5 R:R, -15 pips o BE"
-                      className="w-full bg-[#18181B] border border-[#27272A] rounded-xl px-3 py-2 text-xs text-white font-mono placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500"
-                    />
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveTomorrowTask(t.id)}
+                    className="p-1 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-zinc-800 transition-colors cursor-pointer"
+                    title="Eliminar tarea"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
 
-                  {/* Bitácora operativa / Lección aprendida */}
-                  <div>
-                    <label className="text-[11px] text-zinc-400 block mb-1 font-medium">
-                      Bitácora operativa / Lección aprendida
-                    </label>
-                    <textarea
-                      rows={3}
-                      value={tradingNotes}
-                      onChange={(e) => setTradingNotes(e.target.value)}
-                      placeholder="Ej: Gestión de riesgo respetada (1% de capital). Entrada en retroceso tras ruptura de sesión asiática. Disciplina psicológica: esperé confirmación sin FOMO."
-                      className="w-full bg-[#18181B] border border-[#27272A] rounded-xl px-3 py-2 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 resize-none"
-                    />
-                  </div>
+              {tomorrowTasks.length === 0 && (
+                <div className="p-4 bg-[#18181B]/50 border border-dashed border-[#27272A] rounded-xl text-center text-xs text-zinc-500">
+                  Escribe en tu bitácora qué querés hacer mañana y pulsa &quot;Guardar y Procesar con IA&quot; para extraerlas automáticamente.
                 </div>
               )}
             </div>
 
-            {/* 4. Flujo de Bitácora Nocturna y Planificación del Día Siguiente */}
-            <div className="space-y-4 pt-1 border-t border-[#27272A]/80">
-              {/* a) Cierre del Día (Bitácora) */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs text-zinc-300 font-bold block">
-                    a) Cierre del Día (Bitácora)
-                  </label>
-                  <span className="text-[10px] text-zinc-500 font-mono">Reflexión nocturna</span>
-                </div>
-                <p className="text-[11px] text-zinc-400">
-                  Resumen de qué se logró hoy, qué quedó pendiente y balance general del día.
-                </p>
-                <textarea
-                  rows={3}
-                  value={dayClosure}
-                  onChange={(e) => setDayClosure(e.target.value)}
-                  placeholder="Ej: Se completó la Unidad 1 de Paradigmas y sesión de fuerza en el gimnasio. Quedó pendiente lectura de Economía. Buen nivel de concentración sin distracciones."
-                  className="w-full bg-[#18181B] border border-[#27272A] rounded-xl px-3 py-2.5 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 resize-none leading-relaxed"
+            {/* Quick Add input */}
+            {tomorrowTasks.length < 6 && (
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="text"
+                  value={newTomorrowTaskText}
+                  onChange={(e) => setNewTomorrowTaskText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddTomorrowTask();
+                    }
+                  }}
+                  placeholder="Agregar tarea manual para mañana..."
+                  className="flex-1 bg-[#18181B] border border-[#27272A] rounded-xl px-3 py-2 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500"
                 />
+                <button
+                  type="button"
+                  onClick={handleAddTomorrowTask}
+                  className="px-3.5 py-2 bg-white hover:bg-zinc-200 text-zinc-950 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5 text-zinc-950" />
+                  <span>Agregar</span>
+                </button>
               </div>
-
-              {/* b) Plan para Mañana (Top 3-4 Tareas Clave) */}
-              <div className="space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs text-zinc-300 font-bold block">
-                    b) Plan para Mañana (Top 3-4 Tareas Clave)
-                  </label>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400">
-                    {tomorrowTasks.length} / 4 recomendadas
-                  </span>
-                </div>
-                <p className="text-[11px] text-zinc-400">
-                  Lista interactiva de ítems prioritarios. Se reflejarán automáticamente en tu Dashboard como el checklist prioritario del día siguiente.
-                </p>
-
-                {/* Task Items List */}
-                <div className="space-y-2">
-                  {tomorrowTasks.map((t, idx) => (
-                    <div
-                      key={t.id}
-                      className="flex items-center justify-between gap-2 p-2.5 bg-[#18181B] border border-[#27272A] rounded-xl text-xs hover:border-zinc-700 transition-colors"
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                        <span className="w-5 h-5 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-[10px] font-mono font-bold text-zinc-400 shrink-0">
-                          {idx + 1}
-                        </span>
-                        <span className="text-zinc-200 truncate font-medium">{t.text}</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveTomorrowTask(t.id)}
-                        className="p-1 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-zinc-800 transition-colors cursor-pointer"
-                        title="Eliminar tarea"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
-
-                  {tomorrowTasks.length === 0 && (
-                    <div className="p-3 bg-[#18181B]/50 border border-dashed border-[#27272A] rounded-xl text-center text-xs text-zinc-500">
-                      Aún no definiste tareas para mañana. Agrega 3 o 4 tareas clave para amanecer con foco claro.
-                    </div>
-                  )}
-                </div>
-
-                {/* Add Task Input */}
-                {tomorrowTasks.length < 6 && (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={newTomorrowTaskText}
-                      onChange={(e) => setNewTomorrowTaskText(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddTomorrowTask();
-                        }
-                      }}
-                      placeholder="Ej: Estudiar Paradigmas Unidad 2, sesión de trading NY, editar video..."
-                      className="flex-1 bg-[#18181B] border border-[#27272A] rounded-xl px-3 py-2 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddTomorrowTask}
-                      className="px-3.5 py-2 bg-white hover:bg-zinc-200 text-zinc-950 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
-                    >
-                      <Plus className="w-3.5 h-3.5 text-zinc-950" />
-                      <span>Agregar</span>
-                    </button>
-                  </div>
-                )}
-
-                {/* Quick suggestions */}
-                <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  <span className="text-[10px] text-zinc-500 font-mono">Sugerencias:</span>
-                  {[
-                    'Estudio: Paradigmas (U2)',
-                    'Estudio: Diseño de Sistemas',
-                    'Sesión Trading Apertura NY',
-                    'Gimnasio Sesión Fuerza',
-                    'Lectura Matutina 20 min',
-                  ].map((suggestion) => (
-                    <button
-                      key={suggestion}
-                      type="button"
-                      onClick={() => {
-                        if (tomorrowTasks.some((t) => t.text === suggestion)) return;
-                        setTomorrowTasks((prev) => [
-                          ...prev,
-                          {
-                            id: `t_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-                            text: suggestion,
-                            completed: false,
-                          },
-                        ]);
-                      }}
-                      className="text-[10px] font-mono px-2 py-0.5 rounded-lg bg-[#18181B] text-zinc-400 hover:text-white border border-[#27272A] hover:border-zinc-600 transition-colors cursor-pointer"
-                    >
-                      + {suggestion}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full py-3 bg-white hover:bg-[#E4E4E7] text-zinc-950 rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-50 cursor-pointer active:scale-[0.99]"
-            >
-              {submitting ? 'Guardando Registro & Plan...' : 'Guardar Check-In Diario & Plan Nocturno'}
-            </button>
-          </form>
+            )}
+          </div>
         </div>
 
         {/* History Preview (5 cols) */}
         <div className="lg:col-span-5 bg-[#121215] border border-[#27272A] rounded-2xl p-5 sm:p-6 space-y-4 shadow-sm">
           <div className="flex items-center justify-between pb-3 border-b border-[#27272A]">
-            <h3 className="text-base font-bold text-white">Historial Reciente</h3>
+            <h3 className="text-base font-bold text-white">Historial de Bitácoras</h3>
             <span className="text-xs text-zinc-400 font-mono">
               {history.length} {history.length === 1 ? 'registro' : 'registros'}
             </span>
@@ -711,12 +550,12 @@ export const SportsView: React.FC = () => {
               <div className="space-y-1">
                 <h4 className="text-sm font-bold text-white">Sin registros aún</h4>
                 <p className="text-xs text-zinc-400 max-w-xs mx-auto leading-relaxed">
-                  Completa tu primer check-in de hoy para inaugurar tu historial de recuperación, bitácora nocturna y balance de trading.
+                  Completa tu primera bitácora del día con texto libre para inaugurar tu historial de recuperación y foco.
                 </p>
               </div>
             </div>
           ) : (
-            <div className="space-y-2.5 max-h-[650px] overflow-y-auto pr-1">
+            <div className="space-y-2.5 max-h-[720px] overflow-y-auto pr-1">
               {history.map((check) => {
                 let tomorrowTasksList: TaskItem[] = [];
                 if (check.tomorrowTasks) {
@@ -740,19 +579,19 @@ export const SportsView: React.FC = () => {
                         })}
                       </span>
                       <span className="text-white font-mono font-bold">
-                        {check.sleepHours}h sueño
+                        {check.sleepHours ?? 7.5}h sueño
                       </span>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-zinc-400 font-mono">
                       <span className="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800">
-                        Estudio: {check.studyHoursDone}h
+                        Estudio: {check.studyHoursDone ?? 0}h
                       </span>
                       <span className="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800">
-                        Energía: {check.energyLevel}/5
+                        Energía: {check.energyLevel ?? 4}/5
                       </span>
                       <span className="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800">
-                        Estrés: {check.stressLevel}/5
+                        Estrés: {check.stressLevel ?? 2}/5
                       </span>
                       <span className="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-300">
                         {check.workoutType || (check.workoutDone ? '🏋️ Gimnasio' : '💤 Rest')}
@@ -783,12 +622,12 @@ export const SportsView: React.FC = () => {
 
                     {/* Day closure notes */}
                     {(check.dayClosure || check.notes) && (
-                      <p className="text-[11px] text-zinc-300 italic pt-1 leading-snug">
+                      <p className="text-[11px] text-zinc-300 italic pt-1 leading-snug line-clamp-3">
                         "{check.dayClosure || check.notes}"
                       </p>
                     )}
 
-                    {/* Tomorrow tasks planned preview */}
+                    {/* Tomorrow tasks preview */}
                     {tomorrowTasksList.length > 0 && (
                       <div className="pt-1 border-t border-zinc-800/60 text-[10px] text-zinc-400 space-y-0.5">
                         <span className="text-zinc-500 font-mono block">Plan para el día siguiente:</span>
@@ -796,7 +635,9 @@ export const SportsView: React.FC = () => {
                           {tomorrowTasksList.slice(0, 3).map((task) => (
                             <li key={task.id} className="truncate text-zinc-300 flex items-center gap-1.5">
                               <span className="w-1 h-1 rounded-full bg-zinc-500" />
-                              <span>{task.text}</span>
+                              <span className={task.completed ? 'line-through text-zinc-500' : ''}>
+                                {task.text}
+                              </span>
                             </li>
                           ))}
                           {tomorrowTasksList.length > 3 && (
@@ -817,4 +658,5 @@ export const SportsView: React.FC = () => {
     </div>
   );
 };
+
 export default SportsView;

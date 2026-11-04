@@ -138,18 +138,18 @@ const ExamModalContent: React.FC<{
   };
 
   return (
-    <div className="bg-[#121215] border border-[#27272A] rounded-2xl max-w-lg w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="bg-[#121216] border border-[#23232A] rounded-2xl max-w-lg w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
       {/* Header */}
-      <div className="px-4 sm:px-6 py-4 border-b border-zinc-800 flex items-start justify-between shrink-0">
+      <div className="px-5 sm:px-6 py-4 border-b border-[#23232A] flex items-start justify-between shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#18181B] border border-zinc-800 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-[#18181D] border border-[#2A2A33] flex items-center justify-center shrink-0">
             <Calendar className="w-5 h-5 text-zinc-300" />
           </div>
           <div>
             <h3 className="text-base font-bold text-white tracking-tight">
               {isEditing ? 'Editar Examen' : 'Nuevo Examen / Parcial'}
             </h3>
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-[#9CA3AF]">
               Materia: <span className="text-white font-medium">{currentSubjectName}</span>
             </p>
           </div>
@@ -157,7 +157,7 @@ const ExamModalContent: React.FC<{
         <button
           type="button"
           onClick={onClose}
-          className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-[#18181B] transition-colors cursor-pointer"
+          className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-[#18181D] transition-colors cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
@@ -300,13 +300,13 @@ const ExamModalContent: React.FC<{
         </div>
 
         {/* Footer Actions */}
-        <div className="shrink-0 pt-4 border-t border-zinc-800 px-4 sm:px-6 pb-4 bg-[#121215] flex items-center justify-between gap-2">
+        <div className="shrink-0 pt-4 border-t border-[#23232A] px-5 sm:px-6 pb-4 bg-[#121216] flex items-center justify-between gap-2.5">
           {isEditing ? (
             <button
               type="button"
               onClick={handleDeleteFromModal}
               disabled={loading}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-red-400 hover:text-red-300 bg-red-950/20 hover:bg-red-950/40 border border-red-900/40 transition-colors cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-[#1F1515] hover:bg-[#2A1818] text-[#F87171] hover:text-red-300 border border-[#3E1E1E] hover:border-red-900/60 transition-colors cursor-pointer disabled:opacity-50"
             >
               <Trash2 className="w-3.5 h-3.5" />
               <span>Eliminar</span>
@@ -315,19 +315,19 @@ const ExamModalContent: React.FC<{
             <div />
           )}
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <button
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="px-4 py-2 rounded-xl text-xs font-semibold bg-[#18181B] text-zinc-300 border border-[#27272A] hover:border-zinc-500 transition-colors cursor-pointer disabled:opacity-50"
+              className="px-4 py-2 rounded-xl text-xs font-semibold bg-[#18181D] text-[#E4E4E7] border border-[#2A2A33] hover:border-zinc-500 hover:text-white transition-colors cursor-pointer disabled:opacity-50"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-semibold bg-white text-zinc-950 hover:bg-[#E4E4E7] shadow-sm transition-all cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold bg-[#D4FF00] hover:bg-[#C6F135] text-[#09090B] border border-[#D4FF00]/40 shadow-sm transition-all cursor-pointer disabled:opacity-50 active:scale-[0.98]"
             >
               {loading ? (
                 <span>Guardando...</span>

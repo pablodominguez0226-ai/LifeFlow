@@ -72,9 +72,11 @@ export const api = {
   getDashboard: (date: string = new Date().toISOString()) =>
     fetchApi<any>(`/dashboard?date=${encodeURIComponent(date)}`),
 
-  // Calendar
+  // Calendar & Weekly Plan
+  getCurrentWeek: () =>
+    fetchApi<{ slots: any[]; weeklySlots?: any[]; weeklyPlanId: string | null }>('/planner/current-week'),
   getCalendar: (start?: string, end?: string) =>
-    fetchApi<any[]>(
+    fetchApi<any>(
       `/calendar?start=${encodeURIComponent(start || '')}&end=${encodeURIComponent(end || '')}`
     ),
   createBlock: (data: any) =>
@@ -96,9 +98,18 @@ export const api = {
   // Subjects & Academic
   getSubjects: (date: string = new Date().toISOString()) =>
     fetchApi<any[]>(`/subjects?date=${encodeURIComponent(date)}`),
+  getAcademicSubjects: () => fetchApi<any[]>('/academic/subjects'),
+  saveAcademicSyllabus: (data: { subjectName: string; syllabus: Array<{ id: number; title: string; completed: boolean }> }) =>
+    fetchApi<any>('/academic/syllabus', { method: 'PUT', body: JSON.stringify(data) }),
   getSubjectById: (id: string) => fetchApi<any>(`/subjects/${id}`),
   createSubject: (data: any) =>
     fetchApi<any>('/subjects', { method: 'POST', body: JSON.stringify(data) }),
+  createAcademicSubject: (data: any) =>
+    fetchApi<any>('/academic/subject', { method: 'POST', body: JSON.stringify(data) }),
+  updateSubject: (id: string, data: any) =>
+    fetchApi<any>(`/subjects/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteSubject: (id: string) =>
+    fetchApi<any>(`/subjects/${id}`, { method: 'DELETE' }),
   getExams: (date: string = new Date().toISOString()) =>
     fetchApi<any[]>(`/exams?date=${encodeURIComponent(date)}`),
   createExam: (data: any) =>
@@ -169,6 +180,15 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ text }),
     }),
+  deletePriorityTask: (taskId: string) =>
+    fetchApi<any>(`/checkin/priority-tasks/${taskId}`, {
+      method: 'DELETE',
+    }),
+  processFreeformJournal: (text: string, date?: string) =>
+    fetchApi<any>('/journal/process-freeform', {
+      method: 'POST',
+      body: JSON.stringify({ text, date }),
+    }),
 
   // Books & Reading
   getBooks: () => fetchApi<any[]>('/books'),
@@ -180,6 +200,15 @@ export const api = {
     fetchApi<any>(`/books/${id}/start`, { method: 'PATCH' }),
   deleteBook: (id: string) =>
     fetchApi<any>(`/books/${id}`, { method: 'DELETE' }),
+  addBookNote: (bookId: string, data: { content: string; chapter?: string; page?: number }) =>
+    fetchApi<any>(`/books/${bookId}/notes`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  getBookNotes: (bookId: string) => fetchApi<any[]>(`/books/${bookId}/notes`),
+  deleteBookNote: (noteId: string) =>
+    fetchApi<any>(`/books/notes/${noteId}`, { method: 'DELETE' }),
+
 
   // Recommendations & Stats
   getRecommendations: () => fetchApi<any[]>('/recommendations'),
@@ -191,4 +220,34 @@ export const api = {
   // AI Copilot
   getDailyBriefing: (date: string = new Date().toISOString()) =>
     fetchApi<any>(`/ai/daily-briefing?date=${encodeURIComponent(date)}`),
+
+  // Phase 2 / 3 / 4 Endpoints
+  getDashboardData: () => fetchApi<any>('/dashboard'),
+  getPlannerSummary: () => fetchApi<any>('/planner/summary'),
+  getPlannerPreCheck: (startDate?: string) =>
+    fetchApi<any>(`/planner/pre-check${startDate ? `?startDate=${encodeURIComponent(startDate)}` : ''}`),
+  generateWeeklyPlanner: (data?: any) => {
+    const body = typeof data === 'string' ? { startDate: data } : (data || {});
+    return fetchApi<any>('/planner/generate', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  },
+  toggleHabitAtomic: (habitKey: string, date?: string) =>
+    fetchApi<any>('/habits/toggle', {
+      method: 'POST',
+      body: JSON.stringify({ habitKey, date }),
+    }),
+  getHabitsOverview: () => fetchApi<any>('/habits/overview'),
+  getBooksOverview: () => fetchApi<any>('/books/overview'),
+  createBookQueued: (data: { title: string; author: string; totalPages: number; category?: string; dailyTargetMin?: number; status?: string }) =>
+    fetchApi<any>('/books', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateBookStatusOrPages: (id: string, data: { currentPage?: number; status?: string }) =>
+    fetchApi<any>(`/books/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
 };
