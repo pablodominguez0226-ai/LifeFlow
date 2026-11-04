@@ -10,6 +10,14 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true
   },
-  "include": ["src/**/*", "prisma/**/*", "tests/**/*"],
+  "include": [
+    "src/app.ts",
+    "src/db.ts",
+    "src/routes/lifeflow.routes.ts",
+    "src/controllers/habits.controller.ts",
+    "src/controllers/planner.controller.ts",
+    "src/services/scheduler.service.ts",
+    "tests/scheduler.service.test.ts"
+  ],
   "exclude": ["node_modules", "dist"]
 }

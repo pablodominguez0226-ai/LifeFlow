@@ -51,6 +51,11 @@ export class BookService {
 
     return prisma.book.findMany({
       where,
+      include: {
+        notes: {
+          orderBy: { createdAt: 'desc' },
+        },
+      },
       orderBy: [{ status: 'asc' }, { updatedAt: 'desc' }],
     });
   }
@@ -151,4 +156,35 @@ export class BookService {
       where: { id: bookId },
     });
   }
+
+  public static async addBookNote(
+    bookId: string,
+    data: { content: string; chapter?: string; page?: number }
+  ) {
+    const book = await prisma.book.findUnique({ where: { id: bookId } });
+    if (!book) throw new Error('Libro no encontrado');
+
+    return prisma.bookNote.create({
+      data: {
+        bookId,
+        content: data.content.trim(),
+        chapter: data.chapter?.trim() || null,
+        page: data.page !== undefined ? Number(data.page) : book.currentPage,
+      },
+    });
+  }
+
+  public static async getBookNotes(bookId: string) {
+    return prisma.bookNote.findMany({
+      where: { bookId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  public static async deleteBookNote(noteId: string) {
+    return prisma.bookNote.delete({
+      where: { id: noteId },
+    });
+  }
 }
+

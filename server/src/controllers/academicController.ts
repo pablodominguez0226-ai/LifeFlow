@@ -374,4 +374,159 @@ export class AcademicController {
       res.status(500).json({ error: error.message });
     }
   }
+
+  /**
+   * PATCH /api/subjects/:id
+   * Update subject details (name, code, targetHours, difficulty/masteryLevel, priorityWeight, type, color, etc.)
+   */
+  public static async updateSubject(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const {
+        name,
+        code,
+        type,
+        color,
+        professor,
+        masteryLevel,
+        priorityWeight,
+        targetHours,
+        difficulty,
+      } = req.body;
+
+      const existing = await prisma.subject.findUnique({ where: { id } });
+      if (!existing) {
+        return res.status(404).json({ error: 'Materia no encontrada' });
+      }
+
+      const updateData: any = {};
+      if (name !== undefined) updateData.name = String(name).trim();
+      if (code !== undefined) updateData.code = code ? String(code).trim().toUpperCase() : null;
+      if (type !== undefined) updateData.type = type;
+      if (color !== undefined) updateData.color = color;
+      if (professor !== undefined) updateData.professor = professor ? String(professor).trim() : null;
+
+      // Handle difficulty mapping (can accept string BAJO/MEDIO/ALTO or numeric priority weight)
+      if (difficulty !== undefined) {
+        if (typeof difficulty === 'string' && ['BAJO', 'MEDIO', 'ALTO'].includes(difficulty.toUpperCase())) {
+          updateData.masteryLevel = difficulty.toUpperCase();
+        } else if (!isNaN(Number(difficulty))) {
+          updateData.priorityWeight = Number(difficulty);
+        }
+      }
+
+      if (masteryLevel !== undefined) {
+        updateData.masteryLevel = String(masteryLevel).toUpperCase();
+      }
+      if (priorityWeight !== undefined) {
+        updateData.priorityWeight = Number(priorityWeight);
+      }
+      if (targetHours !== undefined) {
+        updateData.targetHours = targetHours !== null && targetHours !== '' ? Number(targetHours) : null;
+      }
+
+      const updated = await prisma.subject.update({
+        where: { id },
+        data: updateData,
+        include: {
+          exams: { orderBy: { date: 'asc' } },
+          units: {
+            include: {
+              topics: { orderBy: { createdAt: 'asc' } },
+            },
+            orderBy: { unitNumber: 'asc' },
+          },
+          topics: { orderBy: { orderIndex: 'asc' } },
+          academicTasks: { orderBy: { priorityScore: 'desc' } },
+        },
+      });
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Error updating subject:', error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  /**
+   * DELETE /api/subjects/:id
+   * Cascade delete subject along with its exams, units, topics, and tasks
+   */
+  public static async deleteSubject(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+
+      const subject = await prisma.subject.findUnique({
+        where: { id },
+        include: {
+          units: { select: { id: true } },
+          exams: { select: { id: true } },
+          academicTasks: { select: { id: true } },
+          topics: { select: { id: true } },
+        },
+      });
+
+      if (!subject) {
+        return res.status(404).json({ error: 'Materia no encontrada' });
+      }
+
+      const unitIds = subject.units.map((u) => u.id);
+      const taskIds = subject.academicTasks.map((t) => t.id);
+
+      // Perform cascade deletion in atomic transaction
+      await prisma.$transaction(async (tx) => {
+        // 1. Unlink schedule blocks referencing tasks from this subject
+        if (taskIds.length > 0) {
+          await tx.scheduleBlock.updateMany({
+            where: { academicTaskId: { in: taskIds } },
+            data: { academicTaskId: null },
+          });
+        }
+
+        // 2. Unlink activities referencing this subject
+        await tx.activity.updateMany({
+          where: { subjectId: id },
+          data: { subjectId: null },
+        });
+
+        // 3. Delete topics from academic units
+        if (unitIds.length > 0) {
+          await tx.academicTopic.deleteMany({
+            where: { unitId: { in: unitIds } },
+          });
+        }
+
+        // 4. Delete academic units
+        await tx.academicUnit.deleteMany({
+          where: { subjectId: id },
+        });
+
+        // 5. Delete academic tasks
+        await tx.academicTask.deleteMany({
+          where: { subjectId: id },
+        });
+
+        // 6. Delete legacy topics
+        await tx.topic.deleteMany({
+          where: { subjectId: id },
+        });
+
+        // 7. Delete exams
+        await tx.exam.deleteMany({
+          where: { subjectId: id },
+        });
+
+        // 8. Delete the subject itself
+        await tx.subject.delete({
+          where: { id },
+        });
+      });
+
+      res.json({ success: true, message: 'Materia y dependencias eliminadas con éxito', id });
+    } catch (error: any) {
+      console.error('Error deleting subject in cascade:', error);
+      res.status(500).json({ error: error.message });
+    }
+  }
 }
+

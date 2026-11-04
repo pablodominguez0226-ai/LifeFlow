@@ -4,6 +4,7 @@ import { prisma } from '../db';
 import { differenceInCalendarDays } from 'date-fns';
 import { PriorityScorer } from '../engine/priorityScorer';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
+import { AcademicController } from './academicController';
 
 export class SubjectController {
   public static async getSubjects(req: Request, res: Response) {
@@ -107,7 +108,7 @@ export class SubjectController {
   public static async createSubject(req: Request, res: Response) {
     try {
       const userId = (req as AuthenticatedRequest).userId;
-      const { name, code, type, color, professor, masteryLevel, priorityWeight } = req.body;
+      const { name, code, type, color, professor, masteryLevel, priorityWeight, targetHours } = req.body;
       const subject = await AcademicService.createSubject(userId, {
         name,
         code,
@@ -116,6 +117,7 @@ export class SubjectController {
         professor,
         masteryLevel: masteryLevel || 'MEDIO',
         priorityWeight: Number(priorityWeight) || 1.0,
+        targetHours: targetHours ? Number(targetHours) : 30.0,
       });
       res.status(201).json(subject);
     } catch (error: any) {
@@ -124,26 +126,11 @@ export class SubjectController {
   }
 
   public static async updateSubject(req: Request, res: Response) {
-    try {
-      const id = req.params.id as string;
-      const updated = await prisma.subject.update({
-        where: { id },
-        data: req.body,
-      });
-      res.json(updated);
-    } catch (error: any) {
-      res.status(400).json({ error: error.message });
-    }
+    return AcademicController.updateSubject(req, res);
   }
 
   public static async deleteSubject(req: Request, res: Response) {
-    try {
-      const id = req.params.id as string;
-      await prisma.subject.delete({ where: { id } });
-      res.json({ success: true, id });
-    } catch (error: any) {
-      res.status(400).json({ error: error.message });
-    }
+    return AcademicController.deleteSubject(req, res);
   }
 
   public static async logFocusSession(req: Request, res: Response) {

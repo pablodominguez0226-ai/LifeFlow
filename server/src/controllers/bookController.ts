@@ -63,4 +63,39 @@ export class BookController {
       res.status(400).json({ error: error.message });
     }
   }
+
+  public static async addBookNote(req: Request, res: Response) {
+    try {
+      const bookId = req.params.id as string;
+      const { content, chapter, page } = req.body;
+      if (!content || !content.trim()) {
+        return res.status(400).json({ error: 'El contenido del aprendizaje o tip es obligatorio' });
+      }
+      const note = await BookService.addBookNote(bookId, { content, chapter, page });
+      res.status(201).json(note);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  public static async getBookNotes(req: Request, res: Response) {
+    try {
+      const bookId = req.params.id as string;
+      const notes = await BookService.getBookNotes(bookId);
+      res.json(notes);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  public static async deleteBookNote(req: Request, res: Response) {
+    try {
+      const noteId = req.params.noteId as string;
+      await BookService.deleteBookNote(noteId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  }
 }
+

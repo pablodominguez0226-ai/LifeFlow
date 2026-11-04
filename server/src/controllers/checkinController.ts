@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { HabitService } from '../services/habitService';
+import { AiService } from '../services/aiService';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 
 export class CheckinController {
@@ -164,5 +165,32 @@ export class CheckinController {
       res.status(400).json({ error: error.message });
     }
   }
+
+  public static async deletePriorityTask(req: Request, res: Response) {
+    try {
+      const userId = (req as AuthenticatedRequest).userId;
+      const taskId = req.params.taskId as string;
+      const result = await HabitService.deletePriorityTask(taskId, userId);
+      res.json(result);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  public static async processFreeformJournal(req: Request, res: Response) {
+    try {
+      const userId = (req as AuthenticatedRequest).userId;
+      const { text, date } = req.body;
+      if (!text || typeof text !== 'string' || !text.trim()) {
+        return res.status(400).json({ error: 'El texto de la bitácora es obligatorio' });
+      }
+      const refDate = date ? new Date(date) : new Date();
+      const result = await AiService.processFreeformJournal(text, userId, refDate);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
 }
+
 

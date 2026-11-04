@@ -148,6 +148,7 @@ export class AcademicService {
       professor?: string;
       masteryLevel: string;
       priorityWeight: number;
+      targetHours?: number;
     }
   ) {
     let targetUserId = userId;

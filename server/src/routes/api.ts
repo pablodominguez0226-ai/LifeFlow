@@ -44,8 +44,8 @@ router.delete('/recurring-rules/:id', RecurringRuleController.deleteRule);
 router.get('/subjects', SubjectController.getSubjects);
 router.get('/subjects/:id', SubjectController.getSubjectById);
 router.post('/subjects', SubjectController.createSubject);
-router.patch('/subjects/:id', SubjectController.updateSubject);
-router.delete('/subjects/:id', SubjectController.deleteSubject);
+router.patch('/subjects/:id', AcademicController.updateSubject);
+router.delete('/subjects/:id', AcademicController.deleteSubject);
 router.post('/subjects/:id/log-focus-session', SubjectController.logFocusSession);
 
 // Academic Units & Topics (Hierarchical Spaced Repetition)
@@ -87,6 +87,10 @@ router.get('/checkin/history', CheckinController.getHistory);
 router.get('/checkin/priority-tasks', CheckinController.getPriorityTasks);
 router.patch('/checkin/priority-tasks/:taskId/toggle', CheckinController.togglePriorityTask);
 router.post('/checkin/priority-tasks', CheckinController.addPriorityTask);
+router.delete('/checkin/priority-tasks/:taskId', CheckinController.deletePriorityTask);
+
+// Bitácora / Journal Freeform Processing
+router.post('/journal/process-freeform', CheckinController.processFreeformJournal);
 
 // Books & Readings
 router.get('/books', BookController.getBooks);
@@ -94,6 +98,9 @@ router.post('/books', BookController.createBook);
 router.patch('/books/:id', BookController.updateBook);
 router.patch('/books/:id/start', BookController.startReading);
 router.delete('/books/:id', BookController.deleteBook);
+router.post('/books/:id/notes', BookController.addBookNote);
+router.get('/books/:id/notes', BookController.getBookNotes);
+router.delete('/books/notes/:noteId', BookController.deleteBookNote);
 
 // Recommendations & Stats
 router.get('/recommendations', RecommendationController.getRecommendations);

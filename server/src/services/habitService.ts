@@ -543,5 +543,41 @@ export class HabitService {
 
     return { checkinId: checkin.id, tasks };
   }
+
+  public static async deletePriorityTask(taskId: string, userId?: string) {
+    let targetUserId = userId;
+    if (!targetUserId) {
+      const user = await prisma.user.findFirst();
+      if (!user) throw new Error('No user found');
+      targetUserId = user.id;
+    }
+
+    const checkins = await prisma.dailyCheckIn.findMany({
+      where: {
+        userId: targetUserId,
+        tomorrowTasks: { not: null },
+      },
+      orderBy: { date: 'desc' },
+      take: 5,
+    });
+
+    for (const checkin of checkins) {
+      if (!checkin.tomorrowTasks) continue;
+      try {
+        const tasks = JSON.parse(checkin.tomorrowTasks);
+        if (Array.isArray(tasks) && tasks.some((t: any) => t.id === taskId)) {
+          const updatedTasks = tasks.filter((t: any) => t.id !== taskId);
+          await prisma.dailyCheckIn.update({
+            where: { id: checkin.id },
+            data: { tomorrowTasks: JSON.stringify(updatedTasks) },
+          });
+          return { success: true, tasks: updatedTasks };
+        }
+      } catch (e) {
+        // ignore parse error
+      }
+    }
+    return { success: false };
+  }
 }
 
