@@ -7,6 +7,23 @@ generator client {
   provider = "prisma-client-js"
 }
 
+enum Role {
+  USER
+  ADMIN
+}
+
+enum PlanTier {
+  FREE
+  PRO
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  INACTIVE
+  CANCELLED
+  PAST_DUE
+}
+
 enum Category {
   ACADEMIC_CLASS
   STUDY_DEEP
@@ -24,8 +41,46 @@ enum SlotStatus {
   FREED
 }
 
+model User {
+  id               String            @id @default(uuid())
+  email            String            @unique
+  name             String?
+  passwordHash     String?
+  googleId         String?           @unique
+  role             Role              @default(USER)
+  plan             PlanTier          @default(FREE)
+  telegramChatId   String?           @unique
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  subscription     Subscription?
+  habitDefinitions HabitDefinition[]
+  habitLogs        HabitLog[]
+  books            Book[]
+  projectTasks     ProjectTask[]
+  exams            Exam[]
+  plannedSlots     PlannedSlot[]
+  fixedRoutines    FixedRoutine[]
+}
+
+model Subscription {
+  id                   String             @id @default(uuid())
+  userId               String             @unique
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeCustomerId     String?            @unique
+  stripeSubscriptionId String?            @unique
+  stripePriceId        String?
+  status               SubscriptionStatus @default(INACTIVE)
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+}
+
 model Exam {
   id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   subject   String
   type      String
   date      DateTime
@@ -35,6 +90,8 @@ model Exam {
 
 model FixedRoutine {
   id         String   @id @default(uuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   title      String
   category   Category
   dayOfWeek  Int
@@ -54,6 +111,8 @@ model WeeklyPlan {
 
 model PlannedSlot {
   id           String     @id @default(uuid())
+  userId       String?
+  user         User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
   weeklyPlanId String
   weeklyPlan   WeeklyPlan @relation(fields: [weeklyPlanId], references: [id], onDelete: Cascade)
   title        String
@@ -67,6 +126,8 @@ model PlannedSlot {
 
 model HabitLog {
   id         String   @id @default(uuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   habitKey   String
   date       DateTime @db.Date
   completed  Boolean  @default(true)
@@ -94,6 +155,8 @@ model AcademicSubject {
 
 model HabitDefinition {
   id         String   @id @default(uuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   key        String   @unique
   name       String
   category   Category
@@ -103,20 +166,24 @@ model HabitDefinition {
 }
 
 model Book {
-  id          String   @id @default(uuid())
-  title       String
-  author      String
-  totalPages  Int
-  currentPage Int      @default(0)
-  status      String   @default("READING") // READING, QUEUED, FINISHED
-  category    String   @default("Técnico")
-  dailyTargetMin Int   @default(30)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(uuid())
+  userId         String?
+  user           User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title          String
+  author         String
+  totalPages     Int
+  currentPage    Int      @default(0)
+  status         String   @default("READING") // READING, QUEUED, FINISHED
+  category       String   @default("Técnico")
+  dailyTargetMin Int      @default(30)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model ProjectTask {
   id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   title     String
   system    String   @default("General") // LifeFlow, FitTracker, Konta, Trading/Bots, etc.
   status    String   @default("TODO")    // TODO, IN_PROGRESS, DONE

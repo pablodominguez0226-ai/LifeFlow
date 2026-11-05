@@ -267,6 +267,7 @@ export async function getHabitsHeatmap(req: Request, res: Response) {
     if (definitions.length === 0) {
       definitions = SYSTEM_HABITS.map((h) => ({
         id: h.key,
+        userId: null,
         key: h.key,
         name: h.label,
         category: h.category as any,
@@ -356,6 +357,7 @@ export async function freezeStreakDay(req: Request, res: Response) {
     if (definitions.length === 0) {
       definitions = SYSTEM_HABITS.map((h) => ({
         id: h.key,
+        userId: null,
         key: h.key,
         name: h.label,
         category: h.category as any,

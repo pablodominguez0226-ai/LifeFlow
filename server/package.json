@@ -21,9 +21,11 @@
     "date-fns": "^4.1.0",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "google-auth-library": "^11.3.3",
     "ical-generator": "^11.1.1",
     "jsonwebtoken": "^9.0.3",
     "node-cron": "^4.6.0",
+    "stripe": "^23.1.0",
     "telegraf": "^4.16.3",
     "zod": "^3.24.2"
   },

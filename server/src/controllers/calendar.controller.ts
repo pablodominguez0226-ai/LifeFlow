@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import ical, { ICalCalendarMethod, ICalEventRepeatingFreq, ICalWeekday } from 'ical-generator';
 import { subWeeks, addDays, startOfWeek } from 'date-fns';
 import { prisma } from '../db';
+import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 
 /**
  * Formatea el título del slot asignándole el prefijo e ícono semántico según la especificación de LifeFlow.
@@ -61,6 +62,9 @@ const weekdayMap: Record<number, ICalWeekday> = {
  */
 export async function exportCalendarFeed(req: Request, res: Response) {
   try {
+    const authReq = req as AuthenticatedRequest;
+    const targetUserId = authReq.userId;
+
     const calendar = ical({
       name: 'LifeFlow Agenda',
       description: 'LifeFlow Agenda Inteligente Sincronizada',
@@ -72,8 +76,11 @@ export async function exportCalendarFeed(req: Request, res: Response) {
       },
     });
 
+    const userWhere = targetUserId ? { OR: [{ userId: targetUserId }, { userId: null }] } : {};
+
     // 1. Todos los Exam ordenados por fecha
     const exams = await prisma.exam.findMany({
+      where: userWhere,
       orderBy: { date: 'asc' },
     });
 
@@ -106,13 +113,18 @@ export async function exportCalendarFeed(req: Request, res: Response) {
     });
     const planIds = activeOrRecentPlans.map((p) => p.id);
 
+    const slotWhere: any = {
+      OR: [
+        { weeklyPlanId: { in: planIds } },
+        { start: { gte: twoWeeksAgo } },
+      ],
+    };
+    if (targetUserId) {
+      slotWhere.AND = [{ OR: [{ userId: targetUserId }, { userId: null }] }];
+    }
+
     const slots = await prisma.plannedSlot.findMany({
-      where: {
-        OR: [
-          { weeklyPlanId: { in: planIds } },
-          { start: { gte: twoWeeksAgo } },
-        ],
-      },
+      where: slotWhere,
       orderBy: { start: 'asc' },
     });
 
@@ -129,7 +141,9 @@ export async function exportCalendarFeed(req: Request, res: Response) {
       }
     } else {
       // 3. Las FixedRoutine registradas para poblar eventos recurrentes si no hay slots generados
-      const routines = await prisma.fixedRoutine.findMany();
+      const routines = await prisma.fixedRoutine.findMany({
+        where: userWhere,
+      });
       const baseMonday = startOfWeek(new Date(), { weekStartsOn: 1 });
 
       for (const routine of routines) {

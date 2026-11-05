@@ -133,6 +133,7 @@ async function buildHabitsKeyboard() {
   if (definitions.length === 0) {
     definitions = SYSTEM_HABITS.map((h) => ({
       id: h.key,
+      userId: null,
       key: h.key,
       name: h.label,
       category: h.category as any,
@@ -209,6 +210,86 @@ export async function saveTaskFromTelegram(rawInput: string): Promise<{ system: 
  * Configura comandos, capturadores y callbacks en la instancia de Telegraf.
  */
 function setupBotHandlers(botInstance: Telegraf) {
+  // Middleware de Control de Acceso: Verifica vinculación y Plan PRO
+  botInstance.use(async (ctx, next) => {
+    try {
+      const chatId = ctx.chat?.id;
+      if (!chatId) return next();
+
+      let user = await prisma.user.findFirst({
+        where: { telegramChatId: String(chatId) },
+      });
+
+      if (!user) {
+        // Si el chat ID coincide con el TELEGRAM_CHAT_ID del archivo .env, vincular al admin automáticamente
+        const envChatId = process.env.TELEGRAM_CHAT_ID?.trim();
+        if (envChatId && String(chatId) === envChatId) {
+          const admin = await prisma.user.findFirst({ where: { role: 'ADMIN' } });
+          if (admin) {
+            user = await prisma.user.update({
+              where: { id: admin.id },
+              data: { telegramChatId: String(chatId) },
+            });
+          }
+        }
+      }
+
+      // Soporte para vincular cuenta vía /start <email_o_id> o /vincular <email_o_id>
+      const text = (ctx.message as any)?.text || '';
+      if (text.startsWith('/start ') || text.startsWith('/vincular ')) {
+        const arg = text.replace(/^\/(start|vincular)\s+/i, '').trim();
+        if (arg) {
+          const matchedUser = await prisma.user.findFirst({
+            where: {
+              OR: [{ id: arg }, { email: arg.toLowerCase() }],
+            },
+          });
+          if (matchedUser) {
+            user = await prisma.user.update({
+              where: { id: matchedUser.id },
+              data: { telegramChatId: String(chatId) },
+            });
+            if (user.plan === 'PRO' || user.role === 'ADMIN') {
+              await ctx.reply(
+                `🎉 *¡Cuenta vinculada con éxito a ${user.name || user.email}!* Plan PRO activo.\nUsa /ayuda para ver los comandos disponibles.`,
+                { parse_mode: 'Markdown' }
+              );
+              return next();
+            } else {
+              await ctx.reply(
+                `⚠️ *Cuenta vinculada a ${user.name || user.email}.*\nTu plan actual es *FREE*. El acceso al bot 24/7 y briefings matutinos requiere el plan *PRO* ($3 USD/mes).\n\nActiva tu plan en la aplicación web en /suscripcion.`,
+                { parse_mode: 'Markdown' }
+              );
+              return;
+            }
+          }
+        }
+      }
+
+      if (!user) {
+        await ctx.reply(
+          `🔒 *LifeFlow Bot - Suscripción Requerida*\n\nEste bot es exclusivo para usuarios con suscripción *PRO ($3 USD/mes)*.\n\nPara vincular tu cuenta de LifeFlow, escribe:\n\`/start tu_email@ejemplo.com\`\n\nSi no posees una cuenta PRO, actívala en /suscripcion desde la app.`,
+          { parse_mode: 'Markdown' }
+        );
+        return;
+      }
+
+      if (user.plan !== 'PRO' && user.role !== 'ADMIN') {
+        await ctx.reply(
+          `🔒 *Función Exclusiva de LifeFlow PRO*\n\nHola ${user.name || 'usuario'}, tu plan actual es *FREE*. El asistente de Telegram 24/7 y los briefings automáticos requieren el plan *PRO* ($3 USD/mes).\n\n👉 Puedes activarlo inmediatamente en /suscripcion.`,
+          { parse_mode: 'Markdown' }
+        );
+        return;
+      }
+
+      (ctx as any).lifeflowUser = user;
+      return next();
+    } catch (err: any) {
+      console.error('Error en middleware de Telegram Bot:', err);
+      return next();
+    }
+  });
+
   // 1. /start y /ayuda
   botInstance.command(['start', 'ayuda'], async (ctx) => {
     const helpMessage = `🤖 *LifeFlow Bot - Captura Rápida & Automatización*

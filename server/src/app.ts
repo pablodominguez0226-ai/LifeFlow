@@ -16,6 +16,8 @@ app.use(cors({
   methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
 }));
 
+// Webhook raw body parser for Stripe signature verification
+app.use('/api/billing/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 
 // Health Check

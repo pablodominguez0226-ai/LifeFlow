@@ -1,23 +1,32 @@
-import { getHabitsOverview, getBooksOverview, startReadingBook } from '../controllers/catalog.controller';
+import { getPaymentConfig, submitPaymentReceipt, getAdminPayments, approvePayment, toggleUserPlan } from "../controllers/manualBilling.controller";
 import { Router } from 'express';
+import { getHabitsOverview, getBooksOverview, startReadingBook } from '../controllers/catalog.controller';
 import { HabitsController } from '../controllers/habits.controller';
 import { PlannerController } from '../controllers/planner.controller';
 import { exportCalendarFeed } from '../controllers/calendar.controller';
-import { sendMorningBriefing, generateMorningBriefingText } from '../services/telegram.service';
+import { sendMorningBriefing } from '../services/telegram.service';
 import { prisma } from '../db';
 import { Category } from '@prisma/client';
+import { requireAuth, requirePlan, AuthenticatedRequest } from '../middlewares/authMiddleware';
+import authRoutes from './auth.routes';
+import billingRoutes from './billing.routes';
 
 const router = Router();
 
+// Sub-routers para Autenticación y Facturación
+router.use('/auth', authRoutes);
+router.use('/billing', billingRoutes);
+
 // Sincronización en vivo con iCalendar (Google Calendar / Apple Calendar)
-router.get('/calendar/feed.ics', exportCalendarFeed);
+// Exclusivo para usuarios con Plan PRO
+router.get('/calendar/feed.ics', requireAuth, requirePlan('PRO'), exportCalendarFeed);
 
 // Endpoint de alternancia atómica, reactividad, Heatmap y Streak Freeze de hábitos
-router.post('/habits/toggle', HabitsController.toggleHabit);
-router.get('/habits/heatmap', HabitsController.getHabitsHeatmap);
-router.post('/habits/freeze', HabitsController.freezeStreakDay);
+router.post('/habits/toggle', requireAuth, HabitsController.toggleHabit);
+router.get('/habits/heatmap', requireAuth, HabitsController.getHabitsHeatmap);
+router.post('/habits/freeze', requireAuth, HabitsController.freezeStreakDay);
 
-// Telegram Bot endpoints (Fase 4)
+// Telegram Bot endpoints
 router.get('/telegram/status', (req, res) => {
   res.json({
     status: 'online',
@@ -26,7 +35,8 @@ router.get('/telegram/status', (req, res) => {
     cronSchedule: '5 7 * * * (07:05 AM America/Argentina/Mendoza)',
   });
 });
-router.post('/telegram/briefing/test', async (req, res) => {
+
+router.post('/telegram/briefing/test', requireAuth, requirePlan('PRO'), async (req, res) => {
   try {
     const result = await sendMorningBriefing();
     res.json(result);
@@ -36,21 +46,21 @@ router.post('/telegram/briefing/test', async (req, res) => {
 });
 
 // Endpoints del planificador y métricas
-router.get('/planner/pre-check', PlannerController.getPreCheck);
-router.get('/planner/summary', PlannerController.getWeeklySummary);
-router.post('/planner/generate', PlannerController.generateWeeklyPlan);
-router.get('/planner/current-week', PlannerController.getCurrentWeek);
+router.get('/planner/pre-check', requireAuth, PlannerController.getPreCheck);
+router.get('/planner/summary', requireAuth, PlannerController.getWeeklySummary);
+router.post('/planner/generate', requireAuth, PlannerController.generateWeeklyPlan);
+router.get('/planner/current-week', requireAuth, PlannerController.getCurrentWeek);
 
-// Endpoints de Calendario y Agenda Semanal Sanitizada
-router.get('/calendar', PlannerController.getCalendar);
-router.patch('/calendar/block/:id', async (req, res) => {
+// Endpoints de Calendario y Agenda Semanal
+router.get('/calendar', requireAuth, PlannerController.getCalendar);
+router.patch('/calendar/block/:id', requireAuth, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const { status } = req.body;
     const updated = await prisma.plannedSlot.update({
       where: { id },
       data: {
-        status: status === 'COMPLETADO' || status === 'COMPLETED' ? 'COMPLETED' as any : 'PENDING' as any,
+        status: status === 'COMPLETADO' || status === 'COMPLETED' ? ('COMPLETED' as any) : ('PENDING' as any),
       },
     });
     return res.json(updated);
@@ -58,9 +68,10 @@ router.patch('/calendar/block/:id', async (req, res) => {
     return res.status(500).json({ error: err.message });
   }
 });
-router.delete('/calendar/block/:id', async (req, res) => {
+
+router.delete('/calendar/block/:id', requireAuth, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     await prisma.plannedSlot.delete({ where: { id } });
     return res.json({ success: true });
   } catch (err: any) {
@@ -69,12 +80,14 @@ router.delete('/calendar/block/:id', async (req, res) => {
 });
 
 // Endpoint principal del Dashboard
-router.get('/dashboard', PlannerController.getDashboardData);
+router.get('/dashboard', requireAuth, PlannerController.getDashboardData);
 
 // GET /api/academic/subjects
-// Retorna la lista de materias con su progreso, exámenes y temario parseado en JSON
-router.get('/academic/subjects', async (req, res) => {
+router.get('/academic/subjects', requireAuth, async (req, res) => {
   try {
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.userId;
+
     let subjects = await prisma.academicSubject.findMany({
       orderBy: { name: 'asc' },
     });
@@ -126,7 +139,9 @@ router.get('/academic/subjects', async (req, res) => {
       });
     }
 
+    const examWhere = userId ? { OR: [{ userId }, { userId: null }] } : {};
     const allExams = await prisma.exam.findMany({
+      where: examWhere,
       orderBy: { date: 'asc' },
     });
 
@@ -167,9 +182,7 @@ router.get('/academic/subjects', async (req, res) => {
 });
 
 // PUT /api/academic/syllabus
-// Recibe { subjectName: string, syllabus: Array<{ id: number, title: string, completed: boolean }> }
-// Actualiza el temario y recalcula progressPerc en base al porcentaje de items completados. Responde HTTP 200 con el objeto actualizado.
-router.put('/academic/syllabus', async (req, res) => {
+router.put('/academic/syllabus', requireAuth, async (req, res) => {
   try {
     const { subjectName, syllabus } = req.body;
     if (!subjectName || typeof subjectName !== 'string') {
@@ -196,7 +209,6 @@ router.put('/academic/syllabus', async (req, res) => {
       },
     });
 
-    // Sincronizar también con AcademicProgress para retrocompatibilidad
     await prisma.academicProgress.upsert({
       where: { subject: trimmedName },
       update: { progressPerc },
@@ -228,9 +240,12 @@ router.put('/academic/syllabus', async (req, res) => {
   }
 });
 
-// Endpoint de Plan Académico & Materias
-router.post('/academic/subject', async (req, res) => {
+// POST /api/academic/subject
+router.post('/academic/subject', requireAuth, async (req, res) => {
   try {
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.userId;
+
     const { name, scheduleDay, scheduleTime, examType, examDate, weight, progressPerc } = req.body;
     if (!name || typeof name !== 'string') {
       return res.status(400).json({ error: 'El nombre de la materia es requerido' });
@@ -238,7 +253,6 @@ router.post('/academic/subject', async (req, res) => {
 
     const trimmedName = name.trim();
 
-    // Upsert AcademicProgress
     const progress = await prisma.academicProgress.upsert({
       where: { subject: trimmedName },
       update: {
@@ -250,7 +264,6 @@ router.post('/academic/subject', async (req, res) => {
       },
     });
 
-    // Upsert AcademicSubject
     await prisma.academicSubject.upsert({
       where: { name: trimmedName },
       update: {
@@ -267,6 +280,7 @@ router.post('/academic/subject', async (req, res) => {
     if (examType && examDate) {
       createdExam = await prisma.exam.create({
         data: {
+          userId,
           subject: trimmedName,
           type: String(examType),
           date: new Date(examDate),
@@ -295,6 +309,7 @@ router.post('/academic/subject', async (req, res) => {
 
       createdRoutine = await prisma.fixedRoutine.create({
         data: {
+          userId,
           title: `Cursado: ${trimmedName}`,
           category: Category.ACADEMIC_CLASS,
           dayOfWeek: dayInt,
@@ -321,25 +336,45 @@ router.post('/academic/subject', async (req, res) => {
   }
 });
 
-router.get('/habits/overview', getHabitsOverview);
-router.get('/books/overview', getBooksOverview);
-router.post('/books/start-reading', startReadingBook);
+router.get('/habits/overview', requireAuth, getHabitsOverview);
+router.get('/books/overview', requireAuth, getBooksOverview);
+router.post('/books/start-reading', requireAuth, startReadingBook);
 
-router.post('/books', async (req, res) => {
+router.post('/books', requireAuth, async (req, res) => {
   try {
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.userId;
+    const userPlan = authReq.user?.plan;
+
+    // Regla Freemium: Plan FREE solo permite 1 libro activo simultáneo
     const { title, author, totalPages, currentPage, category, dailyTargetMin, status } = req.body;
     if (!title || !author) {
       return res.status(400).json({ error: 'Título y autor son obligatorios' });
     }
+
+    let initialStatus = status || 'QUEUED';
+    if (initialStatus === 'READING' && userPlan !== 'PRO') {
+      const activeBooksCount = await prisma.book.count({
+        where: {
+          status: 'READING',
+          ...(userId ? { userId } : {}),
+        },
+      });
+      if (activeBooksCount >= 1) {
+        initialStatus = 'QUEUED';
+      }
+    }
+
     const book = await prisma.book.create({
       data: {
+        userId,
         title: title.trim(),
         author: author.trim(),
         totalPages: Number(totalPages) || 100,
         currentPage: Number(currentPage) || 0,
         category: category || 'General',
         dailyTargetMin: Number(dailyTargetMin) || 30,
-        status: status || 'QUEUED',
+        status: initialStatus,
       },
     });
     return res.status(201).json(book);
@@ -348,10 +383,31 @@ router.post('/books', async (req, res) => {
   }
 });
 
-router.patch('/books/:id', async (req, res) => {
+router.patch('/books/:id', requireAuth, async (req, res) => {
   try {
-    const { id } = req.params;
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.userId;
+    const userPlan = authReq.user?.plan;
+    const id = String(req.params.id);
     const { currentPage, status, totalPages, title, author } = req.body;
+
+    // Si intenta poner un libro en READING y es FREE, verificar si ya tiene uno activo
+    if (status === 'READING' && userPlan !== 'PRO') {
+      const activeBooks = await prisma.book.findMany({
+        where: {
+          status: 'READING',
+          id: { not: id },
+          ...(userId ? { userId } : {}),
+        },
+      });
+      if (activeBooks.length >= 1) {
+        return res.status(403).json({
+          error: 'El plan FREE solo permite 1 libro activo a la vez. Actualiza a PRO para lectura simultánea ilimitada.',
+          code: 'PRO_REQUIRED',
+        });
+      }
+    }
+
     const dataToUpdate: any = {};
     if (currentPage !== undefined) dataToUpdate.currentPage = Number(currentPage);
     if (status !== undefined) dataToUpdate.status = status;
@@ -369,4 +425,13 @@ router.patch('/books/:id', async (req, res) => {
   }
 });
 
+
+// Rutas de Pagos Manuales y Admin
+router.get("/billing/config", getPaymentConfig);
+router.post("/billing/submit", submitPaymentReceipt);
+router.get("/admin/payments", getAdminPayments);
+router.post("/admin/payments/:paymentId/approve", approvePayment);
+router.post("/admin/users/:userId/plan-action", toggleUserPlan);
+
 export default router;
+
