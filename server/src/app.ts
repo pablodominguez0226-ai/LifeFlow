@@ -4,6 +4,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import lifeflowRoutes from './routes/lifeflow.routes';
+import { initTelegramBot, stopTelegramBot } from './services/telegram.service';
 
 dotenv.config();
 
@@ -24,6 +25,7 @@ app.get('/health', (req, res) => {
 
 // LifeFlow Phase 2 API Routes
 app.use('/api', lifeflowRoutes);
+app.get('/calendar/feed.ics', (req, res) => res.redirect(307, '/api/calendar/feed.ics'));
 
 // Error Handling Middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -51,6 +53,17 @@ if (process.env.NODE_ENV !== 'test') {
     console.log(`🌐 Health: http://localhost:${PORT}/health`);
     console.log(`📊 API Base: http://localhost:${PORT}/api`);
     console.log(`===========================================`);
+
+    // Inicializar Bot de Telegram (Long Polling & Briefing Matutino 07:05 AM)
+    initTelegramBot();
+  });
+
+  // Manejo de Graceful Shutdown para Long Polling
+  process.once('SIGINT', () => {
+    stopTelegramBot('SIGINT');
+  });
+  process.once('SIGTERM', () => {
+    stopTelegramBot('SIGTERM');
   });
 }
 

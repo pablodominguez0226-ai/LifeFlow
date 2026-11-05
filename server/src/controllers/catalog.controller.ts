@@ -79,3 +79,26 @@ export async function getBooksOverview(req: Request, res: Response) {
     return res.status(500).json({ error: error.message });
   }
 }
+
+export async function startReadingBook(req: Request, res: Response) {
+  try {
+    const { bookId } = req.body;
+    if (!bookId) return res.status(400).json({ error: "bookId requerido" });
+
+    // Pasar cualquier libro activo a cola
+    await prisma.book.updateMany({
+      where: { status: "READING" },
+      data: { status: "QUEUED" }
+    });
+
+    // Activar el libro seleccionado
+    const activated = await prisma.book.update({
+      where: { id: bookId },
+      data: { status: "READING" }
+    });
+
+    return res.status(200).json({ success: true, book: activated });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+}

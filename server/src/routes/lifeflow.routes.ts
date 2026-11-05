@@ -1,14 +1,39 @@
-import { getHabitsOverview, getBooksOverview } from '../controllers/catalog.controller';
+import { getHabitsOverview, getBooksOverview, startReadingBook } from '../controllers/catalog.controller';
 import { Router } from 'express';
 import { HabitsController } from '../controllers/habits.controller';
 import { PlannerController } from '../controllers/planner.controller';
+import { exportCalendarFeed } from '../controllers/calendar.controller';
+import { sendMorningBriefing, generateMorningBriefingText } from '../services/telegram.service';
 import { prisma } from '../db';
 import { Category } from '@prisma/client';
 
 const router = Router();
 
-// Endpoint de alternancia atómica y reactividad de hábitos
+// Sincronización en vivo con iCalendar (Google Calendar / Apple Calendar)
+router.get('/calendar/feed.ics', exportCalendarFeed);
+
+// Endpoint de alternancia atómica, reactividad, Heatmap y Streak Freeze de hábitos
 router.post('/habits/toggle', HabitsController.toggleHabit);
+router.get('/habits/heatmap', HabitsController.getHabitsHeatmap);
+router.post('/habits/freeze', HabitsController.freezeStreakDay);
+
+// Telegram Bot endpoints (Fase 4)
+router.get('/telegram/status', (req, res) => {
+  res.json({
+    status: 'online',
+    botConfigured: Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_BOT_TOKEN !== 'tu_token_aqui'),
+    chatIdConfigured: Boolean(process.env.TELEGRAM_CHAT_ID && process.env.TELEGRAM_CHAT_ID !== 'tu_chat_id_aqui'),
+    cronSchedule: '5 7 * * * (07:05 AM America/Argentina/Mendoza)',
+  });
+});
+router.post('/telegram/briefing/test', async (req, res) => {
+  try {
+    const result = await sendMorningBriefing();
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Endpoints del planificador y métricas
 router.get('/planner/pre-check', PlannerController.getPreCheck);
@@ -298,6 +323,7 @@ router.post('/academic/subject', async (req, res) => {
 
 router.get('/habits/overview', getHabitsOverview);
 router.get('/books/overview', getBooksOverview);
+router.post('/books/start-reading', startReadingBook);
 
 router.post('/books', async (req, res) => {
   try {

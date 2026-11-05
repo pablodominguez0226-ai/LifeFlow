@@ -66,11 +66,13 @@ model PlannedSlot {
 }
 
 model HabitLog {
-  id        String   @id @default(uuid())
-  habitKey  String
-  date      DateTime @db.Date
-  completed Boolean  @default(true)
-  createdAt DateTime @default(now())
+  id         String   @id @default(uuid())
+  habitKey   String
+  date       DateTime @db.Date
+  completed  Boolean  @default(true)
+  isFrozen   Boolean  @default(false) // Indica si el día fue congelado por viaje/descanso
+  freezeNote String?                   // Ej: "Viaje a Malargüe", "Feriado"
+  createdAt  DateTime @default(now())
 
   @@unique([habitKey, date])
 }
@@ -111,4 +113,14 @@ model Book {
   dailyTargetMin Int   @default(30)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model ProjectTask {
+  id        String   @id @default(uuid())
+  title     String
+  system    String   @default("General") // LifeFlow, FitTracker, Konta, Trading/Bots, etc.
+  status    String   @default("TODO")    // TODO, IN_PROGRESS, DONE
+  priority  String   @default("IMPORTANT")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
